@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Deslocamento por Agência</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div id="toast-container"></div>
+
+    <div class="w-full max-w-6xl bg-white rounded-2xl shadow-lg p-6 md:p-8 space-y-6">
+        
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                <button id="tab-cadastro" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-indigo-500 text-indigo-600">
+                    Registo de Viagens
+                </button>
+                <button id="tab-calculadora" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                    Calculadora de Custos
+                </button>
+            </nav>
+        </div>
+
+        <div id="cadastro-view">
+            <header class="text-center">
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Registo de Viagens</h1>
+                <p class="text-gray-500 mt-1">Adicione as viagens que pretende simular à lista abaixo.</p>
+            </header>
+
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center my-6">
+                <label for="csv-file-input" class="block text-sm font-medium text-gray-700 mb-2">Carregue o seu ficheiro de dados (.csv)</label>
+                <input type="file" id="csv-file-input" accept=".csv" class="mx-auto block w-full max-w-xs text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                <p id="file-status" class="text-xs text-gray-500 mt-2">Nenhum ficheiro carregado.</p>
+            </div>
+
+            <main id="main-content" class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 disabled-section">
+                <div class="space-y-6">
+                    <div>
+                        <label for="agencia-select" class="block text-sm font-medium text-gray-700 mb-1">1. Selecione a Agência</label>
+                        <select id="agencia-select" class="w-full p-3 border border-gray-300 rounded-lg"></select>
+                    </div>
+                    <div id="municipio-container" class="disabled-section">
+                        <label for="municipio-select" class="block text-sm font-medium text-gray-700 mb-1">2. Selecione o Município</label>
+                        <select id="municipio-select" class="w-full p-3 border border-gray-300 rounded-lg"></select>
+                    </div>
+                    <div id="setores-container-wrapper" class="disabled-section">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">3. Selecione os Setores Censitários</label>
+                        <div id="geocodigos-container" class="h-56 border border-gray-300 rounded-lg p-3 overflow-y-auto custom-scrollbar bg-gray-50"></div>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-700 mb-2">4. Informe os seus Dados</h3>
+                        <div class="space-y-4">
+                            <input type="text" id="nome-servidor" placeholder="Nome Completo" class="w-full p-3 border border-gray-300 rounded-lg">
+                            <input type="number" id="siape-servidor" placeholder="Nº SIAPE" class="w-full p-3 border border-gray-300 rounded-lg">
+                            <select id="cargo-servidor" class="w-full p-3 border border-gray-300 rounded-lg">
+                                <option value="">-- Selecione o seu cargo --</option>
+                                <option value="Recenseador">Recenseador</option><option value="APM">APM</option><option value="SCQ">SCQ</option><option value="Técnico">Técnico</option><option value="Analista">Analista</option><option value="Tecnologista">Tecnologista</option><option value="Pesquisador">Pesquisador</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button id="adicionar-viagem-btn" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-transform transform hover:scale-105 mt-auto">
+                        Adicionar Viagem à Lista
+                    </button>
+                </div>
+            </main>
+
+            <div class="mt-8">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Viagens Registadas</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white border">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="py-2 px-4 border-b text-left text-sm font-medium text-gray-600">Nº Viagem</th>
+                                <th class="py-2 px-4 border-b text-left text-sm font-medium text-gray-600">Servidor (SIAPE)</th>
+                                <th class="py-2 px-4 border-b text-left text-sm font-medium text-gray-600">Agência</th>
+                                <th class="py-2 px-4 border-b text-left text-sm font-medium text-gray-600">Município</th>
+                                <th class="py-2 px-4 border-b text-left text-sm font-medium text-gray-600">Nº Setores</th>
+                                <th class="py-2 px-4 border-b text-left text-sm font-medium text-gray-600">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="viagens-table-body">
+                           <tr id="placeholder-row"><td colspan="6" class="text-center py-4 text-gray-500">Nenhuma viagem adicionada.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="fim-container" class="text-center p-4">
+                    <p id="simulacoes-guardadas-texto" class="text-gray-600 mb-4 hidden">0 simulações calculadas.</p>
+                    <button id="terminar-btn" class="bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700 transition disabled-section">Descarregar Simulações Calculadas</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="calculo-view" class="hidden">
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                   <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Calcular Custos da Viagem</h1>
+                   <p id="trip-details-header" class="text-gray-500 mt-1"></p>
+                </div>
+                <button id="voltar-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">
+                    &larr; Voltar à Lista
+                </button>
+            </header>
+
+            <main class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                <div class="space-y-6">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Detalhes da Viagem</h3>
+                    <div id="trip-summary" class="text-sm space-y-2 bg-gray-50 p-4 rounded-lg"></div>
+                     <div>
+                         <h3 class="text-sm font-medium text-gray-700 mb-2">Modalidade e Custos</h3>
+                         <div id="modalidade-container-calc" class="flex space-x-4 mb-4">
+                             <label class="flex items-center"><input type="radio" name="modalidade_calc" value="terrestre" class="mr-2"> Terrestre</label>
+                             <label class="flex items-center"><input type="radio" name="modalidade_calc" value="fluvial" class="mr-2"> Fluvial</label>
+                             <label class="flex items-center"><input type="radio" name="modalidade_calc" value="misto" class="mr-2"> Misto</label>
+                         </div>
+                         <div id="veiculo-options-container-calc" class="space-y-4"></div>
+                         <div id="custos-container-calc" class="space-y-4 mt-4"></div>
+                     </div>
+                    <button id="finalizar-calculo-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105 mt-auto">
+                        Finalizar Cálculo
+                    </button>
+                </div>
+                <div id="resultado-calculo-container" class="hidden">
+                     <h2 class="text-xl font-bold text-gray-800 mb-2">Análise de Custos</h2>
+                     <div class="flex space-x-2 mb-2">
+                         <button id="chart-total-btn" class="bg-blue-200 text-blue-800 text-xs font-semibold py-1 px-3 rounded-lg">Ver Custo Total</button>
+                         <button id="chart-diario-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg">Ver Custo Diário</button>
+                     </div>
+                     <canvas id="costs-chart"></canvas>
+                </div>
+            </main>
+        </div>
+
+        <div id="misto-modal-backdrop" class="fixed inset-0 z-50 hidden items-center justify-center" style="background-color: rgba(0,0,0,0.5);">
+            <div id="misto-modal" class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+                <h2 class="text-xl font-bold mb-4">Dividir Distância e Diárias</h2>
+                <p class="mb-2">Distância Total: <strong id="distancia-total-misto">0</strong> km.</p>
+                <p class="mb-4">Dias de Viagem Totais: <strong id="dias-totais-misto">0</strong> dias.</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="distancia-terrestre" class="block text-sm font-medium text-gray-700">Dist. Terrestre (km)</label>
+                        <input type="number" id="distancia-terrestre" class="w-full mt-1 p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label for="dias-diaria-terrestre-misto" class="block text-sm font-medium text-gray-700">Dias Diária Terrestre</label>
+                        <input type="number" id="dias-diaria-terrestre-misto" class="w-full mt-1 p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label for="distancia-fluvial" class="block text-sm font-medium text-gray-700">Dist. Fluvial (km)</label>
+                        <input type="number" id="distancia-fluvial" class="w-full mt-1 p-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label for="dias-diaria-fluvial-misto" class="block text-sm font-medium text-gray-700">Dias Diária Fluvial</label>
+                        <input type="number" id="dias-diaria-fluvial-misto" class="w-full mt-1 p-2 border border-gray-300 rounded-lg">
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end space-x-4">
+                    <button id="cancelar-misto-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">Cancelar</button>
+                    <button id="confirmar-misto-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">Confirmar</button>
+                </div>
+            </div>
+        </div>
+        <div id="view-modal-backdrop" class="fixed inset-0 z-50 hidden items-center justify-center" style="background-color: rgba(0,0,0,0.5);">
+            <div id="view-modal" class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl mx-4 max-h-screen overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Detalhes da Viagem</h2>
+                    <button id="fechar-view-modal" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div id="view-modal-content" class="space-y-4">
+                    </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
