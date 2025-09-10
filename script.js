@@ -5,6 +5,43 @@ document.addEventListener('DOMContentLoaded', () => {
             let viagemAtualParaCalculo = null;
             let costsChart = null;
 
+            Papa.parse("Database.CSV", {
+                download: true, // faz o fetch do arquivo na pasta
+                header: true,   // usa a primeira linha como cabeçalho (colunas)
+                skipEmptyLines: true,
+                complete: function(results) {
+                    const requiredHeaders = ['agencia', 'municipio', 'geocodigo', 'distancia_sede', 'trajeto_diario', 'estabelecimentos'];
+                    const actualHeaders = results.meta.fields;
+                    const missingHeaders = requiredHeaders.filter(h => !actualHeaders.includes(h));
+
+                    if (results.errors.length > 0 || missingHeaders.length > 0) {
+                        showToast(`Erro no CSV. Verifique colunas: ${missingHeaders.join(', ')}`, 'error');
+                        return;
+                    }
+
+                    dadosCompletos = results.data.map((row, index) => ({
+                        ...row,
+                        row_id: index,
+                        geocodigo: String(row.geocodigo || '').trim(),
+                        distancia_sede: parseFloat(String(row.distancia_sede || '0').replace(',', '.')) || 0,
+                        trajeto_diario: parseFloat(String(row.trajeto_diario || '0').replace(',', '.')) || 0,
+                        estabelecimentos: parseInt(row.estabelecimentos, 10) || 0
+                    }));
+                    
+                    mainContent.classList.remove('disabled-section');
+                    popularAgencias();
+
+                    // Seleciona automaticamente a primeira agência e carrega municípios
+                    if (agenciaSelect.options.length > 0) {
+                        agenciaSelect.selectedIndex = 0;
+                        atualizarMunicipios(); // já popula os municípios dessa agência
+                    }
+                },
+                error: (err) => {
+                    showToast(`Erro ao carregar Database: ${err.message}`, 'error');
+                }
+             });
+
             // --- CONSTANTES E ELEMENTOS DO DOM ---
             const VEICULOS_TERRESTRES = { '4x4': { consumo_km_l: 10 }, 'Carro': { consumo_km_l: 12 }, 'Moto': { consumo_km_l: 32 } };
             const MOTORES_FLUVIAIS = { '13 HP': { litros_hora: 5, km_hora: 20 }, '15 HP': { litros_hora: 5, km_hora: 20 }, '25 HP': { litros_hora: 10, km_hora: 30 }, '40 HP': { litros_hora: 25, km_hora: 40 }, '60 HP': { litros_hora: 30, km_hora: 45 }, '90 HP': { litros_hora: 40, km_hora: 45 }, '115 HP': { litros_hora: 45, km_hora: 50 }, '150 HP': { litros_hora: 55, km_hora: 50 }, '200 HP': { litros_hora: 75, km_hora: 60 }, '250 HP': { litros_hora: 90, km_hora: 65 } };
@@ -374,6 +411,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 custosContainerCalc.innerHTML = custosContent;
             }
             
+            function processarCSV(dados) {
+                // Exemplo: preencher o select de agências
+                const agencias = [...new Set(dados.map(item => item.Agencia))];
+                const agenciaSelect = document.getElementById("agencia-select");
+
+                agencias.forEach(ag => {
+                    const option = document.createElement("option");
+                    option.value = ag;
+                    option.textContent = ag;
+                    agenciaSelect.appendChild(option);
+                });
+
+                // Salva os dados CSV em uma variável global para usar depois
+                window.dadosCSV = dados;
+            }
+
+
             function descarregarCSV() {
                 if (simulacoesGuardadas.length === 0) { showToast("Nenhuma simulação para descarregar.", 'info'); return; }
                 const csv = Papa.unparse(simulacoesGuardadas.map(({ viagem_id, ...rest }) => rest), { delimiter: ';' });
@@ -406,7 +460,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // --- EVENT LISTENERS ---
             fileInput.addEventListener('change', handleFileLoad);
-            agenciaSelect.addEventListener('change', atualizarMunicipios);
+            agenciaSelect.addEventListener('change', (e) => {
+                const agencia = e.target.value;
+                popularMunicipios(agencia);
+            });;
             municipioSelect.addEventListener('change', atualizarGeocodigos);
             adicionarViagemBtn.addEventListener('click', adicionarViagem);
             terminarBtn.addEventListener('click', descarregarCSV);
