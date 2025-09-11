@@ -460,10 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // --- EVENT LISTENERS ---
             fileInput.addEventListener('change', handleFileLoad);
-            agenciaSelect.addEventListener('change', (e) => {
-                const agencia = e.target.value;
-                popularMunicipios(agencia);
-            });;
+            agenciaSelect.addEventListener('change', atualizarMunicipios);
             municipioSelect.addEventListener('change', atualizarGeocodigos);
             adicionarViagemBtn.addEventListener('click', adicionarViagem);
             terminarBtn.addEventListener('click', descarregarCSV);
