@@ -1,14 +1,13 @@
 // Variáveis e Constantes
 const VEICULOS_TERRESTRES = { '4x4': { consumo_km_l: 10 }, 'Carro': { consumo_km_l: 12 }, 'Moto': { consumo_km_l: 32 } };
 const MOTORES_FLUVIAIS = { '13 HP': { litros_hora: 5, km_hora: 20 }, '15 HP': { litros_hora: 5, km_hora: 20 }, '25 HP': { litros_hora: 10, km_hora: 30 }, '40 HP': { litros_hora: 25, km_hora: 40 }, '60 HP': { litros_hora: 30, km_hora: 45 }, '90 HP': { litros_hora: 40, km_hora: 45 }, '115 HP': { litros_hora: 45, km_hora: 50 }, '150 HP': { litros_hora: 55, km_hora: 50 }, '200 HP': { litros_hora: 75, km_hora: 60 }, '250 HP': { litros_hora: 90, km_hora: 65 } };
-
 let dadosCompletos = [];
 let viagensRegistadas = [];
 let simulacoesGuardadas = [];
 let viagemAtualParaCalculo = null;
 let costsChart = null;
 
-// Funções principais da aplicação
+// Funções da aplicação
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = 'toast';
@@ -33,7 +32,7 @@ function normalizeHeader(h) {
     return header;
 }
 
-function popularAgencias(agenciaSelect, mainContent) {
+function popularAgencias(agenciaSelect) {
     agenciaSelect.innerHTML = '<option value="">-- Escolha uma agência --</option>';
     [...new Set(dadosCompletos.map(item => item.agencia))].filter(Boolean).sort().forEach(agencia => {
         agenciaSelect.appendChild(new Option(agencia, agencia));
@@ -497,7 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Event Listeners
-    fileInput.addEventListener('change', handleFileLoad);
+    //fileInput.addEventListener('change', (e) => handleFileLoad(e));
     agenciaSelect.addEventListener('change', () => atualizarMunicipios(agenciaSelect));
     municipioSelect.addEventListener('change', () => atualizarGeocodigos(municipioSelect));
     adicionarViagemBtn.addEventListener('click', () => adicionarViagem());
