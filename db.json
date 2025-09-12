@@ -1,0 +1,52 @@
+{
+  "viagens": [
+    {
+      "id": 1,
+      "Sigla": "DF",
+      "Combustivel": "Alcool",
+      "CustoKm": 1.5,
+      "ValorPedagio": 30,
+      "Distancia": 400
+    },
+    {
+      "id": 2,
+      "Sigla": "GO",
+      "Combustivel": "Gasolina",
+      "CustoKm": 2.1,
+      "ValorPedagio": 50,
+      "Distancia": 500
+    },
+    {
+      "id": 3,
+      "Sigla": "MG",
+      "Combustivel": "Alcool",
+      "CustoKm": 1.5,
+      "ValorPedagio": 60,
+      "Distancia": 500
+    },
+    {
+      "id": 4,
+      "Sigla": "MS",
+      "Combustivel": "Gasolina",
+      "CustoKm": 2.1,
+      "ValorPedagio": 80,
+      "Distancia": 700
+    },
+    {
+      "id": 5,
+      "Sigla": "RJ",
+      "Combustivel": "Gasolina",
+      "CustoKm": 2.1,
+      "ValorPedagio": 100,
+      "Distancia": 900
+    },
+    {
+      "id": 6,
+      "Sigla": "SP",
+      "Combustivel": "Alcool",
+      "CustoKm": 1.5,
+      "ValorPedagio": 120,
+      "Distancia": 1000
+    }
+  ]
+}

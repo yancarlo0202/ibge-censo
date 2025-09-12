@@ -171,7 +171,7 @@ function renderizarTabela() {
         row.innerHTML = `<td class="py-2 px-4 border-b text-sm">${index + 1}</td><td class="py-2 px-4 border-b text-sm">${viagem.nomeServidor} (${viagem.siapeServidor})</td><td class="py-2 px-4 border-b text-sm">${viagem.agencia}</td><td class="py-2 px-4 border-b text-sm">${viagem.municipio}</td><td class="py-2 px-4 border-b text-sm">${viagem.setores.length}</td><td class="py-2 px-4 border-b text-sm"><div class="flex space-x-2"><button data-index="${index}" class="calcular-viagem-btn ${corBotaoCalcular} text-xs font-semibold py-1 px-3 rounded-lg transition">${textoBotaoCalcular}</button><button data-index="${index}" class="visualizar-viagem-btn bg-gray-100 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-200 transition">Verificar</button><button data-index="${index}" class="excluir-viagem-btn bg-red-100 text-red-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-red-200 transition">Remover</button></div></td>`;
         viagensTableBody.appendChild(row);
     });
-    
+
     document.querySelectorAll('.calcular-viagem-btn').forEach(btn => btn.addEventListener('click', (e) => {
         const index = parseInt(e.target.dataset.index);
         const viagem = viagensRegistadas[index];
@@ -215,9 +215,9 @@ function abrirVistaCalculo(viagem) {
     const custosContainerCalc = document.getElementById('custos-container-calc');
     const resultadoCalculoContainer = document.getElementById('resultado-calculo-container');
     const { nomeServidor, siapeServidor, agencia, municipio, setores } = viagem;
-    
+
     switchTab('calculadora');
-    
+
     tripDetailsHeader.textContent = `${municipio} - ${agencia}`;
     const soma_estabelecimentos = setores.reduce((acc, s) => acc + (Number(s.estabelecimentos) || 0), 0);
     const dias_viagem = Math.ceil(soma_estabelecimentos / 4) || 1;
@@ -226,7 +226,7 @@ function abrirVistaCalculo(viagem) {
     const distancia_total = (maior_distancia_sede * 2) + (soma_trajetos_diarios * dias_viagem);
     viagemAtualParaCalculo.calculoBase = { soma_estabelecimentos, dias_viagem, distancia_total };
     tripSummary.innerHTML = `<p><strong>Servidor:</strong> ${nomeServidor} (${siapeServidor})</p><p><strong>Nº de Setores:</strong> ${setores.length}</p><p><strong>Total de Estabelecimentos:</strong> ${soma_estabelecimentos}</p><p><strong>Dias de Viagem Calculados:</strong> ${dias_viagem}</p><p><strong>Distância Total Estimada:</strong> ${distancia_total.toFixed(2)} km</p>`;
-    
+
     document.querySelectorAll('input[name="modalidade_calc"]').forEach(radio => radio.checked = false);
     veiculoOptionsContainerCalc.innerHTML = '';
     custosContainerCalc.innerHTML = '';
@@ -425,6 +425,39 @@ function switchTab(tabName) {
     }
 }
 
+// Nova função para carregar dados da API (agora sem parâmetros de DOM)
+function carregarDadosDaAPI() {
+    return fetch('http://localhost:3000/viagens')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Falha ao carregar dados da API.');
+            }
+            return response.json();
+        })
+        .then(data => {
+            dadosCompletos = data.map((row, index) => ({
+                ...row,
+                row_id: index,
+                agencia: String(row.agencia || '').trim(), // Ajuste o nome da coluna para 'agencia'
+                municipio: String(row.municipio || '').trim(), // Ajuste o nome da coluna para 'municipio'
+                geocodigo: String(row.geocodigo || '').trim(),
+                distancia_sede: parseFloat(String(row.distancia_sede || '0').replace(',', '.')) || 0,
+                trajeto_diario: parseFloat(String(row.trajeto_diario || '0').replace(',', '.')) || 0,
+                estabelecimentos: parseInt(row.estabelecimentos, 10) || 0
+            }));
+            
+            // A inicialização da UI acontece aqui, depois que os dados foram carregados
+            const mainContent = document.getElementById('main-content');
+            const agenciaSelect = document.getElementById('agencia-select');
+
+            mainContent.classList.remove('disabled-section');
+            popularAgencias(agenciaSelect);
+        })
+        .catch(error => {
+            showToast(`Erro ao carregar dados da API: ${error.message}`, 'error');
+        });
+}
+
 // Inicialização da Aplicação
 document.addEventListener('DOMContentLoaded', () => {
     // Variáveis e constantes do DOM
@@ -466,8 +499,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const viewModalContent = document.getElementById('view-modal-content');
     const fecharViewModal = document.getElementById('fechar-view-modal');
     const toastContainer = document.getElementById('toast-container');
-    
-    Papa.parse("Database.CSV", {
+
+        Papa.parse("Database.CSV", {
         download: true,
         header: true,
         skipEmptyLines: true,
@@ -494,6 +527,8 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast(`Erro ao carregar Database: ${err.message}`, 'error');
         }
     });
+
+    carregarDadosDaAPI();
 
     // Event Listeners
     //fileInput.addEventListener('change', (e) => handleFileLoad(e));
