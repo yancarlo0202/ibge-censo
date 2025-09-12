@@ -92,7 +92,8 @@ function atualizarGeocodigos(municipioSelect) {
     setoresContainerWrapper.classList.remove('disabled-section');
 }
 
-function adicionarViagem() {
+// ** FUNÇÃO ADICIONAR VIAGEM ATUALIZADA (CREATE) **
+async function adicionarViagem() {
     const nomeServidor = document.getElementById('nome-servidor').value;
     const siapeServidor = document.getElementById('siape-servidor').value;
     const cargoServidor = document.getElementById('cargo-servidor').value;
@@ -104,6 +105,7 @@ function adicionarViagem() {
         showToast("Por favor, preencha todos os campos e selecione pelo menos um setor.", 'error');
         return;
     }
+
     const setores = dadosCompletos.filter(item => selectedIds.includes(item.row_id));
     const novaViagem = {
         id: Date.now(),
@@ -114,25 +116,60 @@ function adicionarViagem() {
         municipio,
         setores
     };
-    viagensRegistadas.push(novaViagem);
-    showToast("Viagem adicionada com sucesso!", 'success');
-    renderizarTabela();
-    resetarFormularioCadastro();
-}
 
-function excluirViagem(index) {
-    if (confirm('Tem a certeza de que pretende excluir esta viagem?')) {
-        const viagemRemovida = viagensRegistadas[index];
-        viagensRegistadas.splice(index, 1);
-        const indexSimulacao = simulacoesGuardadas.findIndex(s => s.viagem_id === viagemRemovida.id);
-        if (indexSimulacao !== -1) {
-            simulacoesGuardadas.splice(indexSimulacao, 1);
+    try {
+        const response = await fetch('http://localhost:3000/viagens', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(novaViagem),
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro ao salvar a viagem na API.');
         }
-        showToast("Viagem removida.", 'info');
+
+        const viagemSalva = await response.json();
+        viagensRegistadas.push(viagemSalva);
+        showToast("Viagem adicionada e salva na API com sucesso!", 'success');
         renderizarTabela();
-        atualizarContadorSimulacoes();
+        resetarFormularioCadastro();
+
+    } catch (error) {
+        showToast(`Erro: ${error.message}`, 'error');
     }
 }
+
+// ** FUNÇÃO EXCLUIR VIAGEM ATUALIZADA (DELETE) **
+async function excluirViagem(index) {
+    if (confirm('Tem a certeza de que pretende excluir esta viagem?')) {
+        const viagemRemovida = viagensRegistadas[index];
+        
+        try {
+            const response = await fetch(`http://localhost:3000/viagens/${viagemRemovida.id}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro ao excluir a viagem da API.');
+            }
+
+            viagensRegistadas.splice(index, 1);
+            const indexSimulacao = simulacoesGuardadas.findIndex(s => s.viagem_id === viagemRemovida.id);
+            if (indexSimulacao !== -1) {
+                simulacoesGuardadas.splice(indexSimulacao, 1);
+            }
+            showToast("Viagem removida com sucesso!", 'success');
+            renderizarTabela();
+            atualizarContadorSimulacoes();
+
+        } catch (error) {
+            showToast(`Erro: ${error.message}`, 'error');
+        }
+    }
+}
+
 
 function visualizarViagem(index) {
     const viagem = viagensRegistadas[index];
@@ -233,7 +270,8 @@ function abrirVistaCalculo(viagem) {
     resultadoCalculoContainer.classList.add('hidden');
 }
 
-function finalizarCalculo(distancia_terrestre = 0, distancia_fluvial = 0, dias_diaria_terrestre = 0, dias_diaria_fluvial = 0) {
+// ** FUNÇÃO FINALIZAR CÁLCULO ATUALIZADA (UPDATE) **
+async function finalizarCalculo(distancia_terrestre = 0, distancia_fluvial = 0, dias_diaria_terrestre = 0, dias_diaria_fluvial = 0) {
     const { id, nomeServidor, siapeServidor, cargoServidor, agencia, municipio, setores } = viagemAtualParaCalculo;
     const { soma_estabelecimentos, dias_viagem, distancia_total } = viagemAtualParaCalculo.calculoBase;
     const modalidade = document.querySelector('input[name="modalidade_calc"]:checked')?.value;
@@ -282,15 +320,36 @@ function finalizarCalculo(distancia_terrestre = 0, distancia_fluvial = 0, dias_d
         custo_diarias_rs: custo_diarias.toFixed(2), custo_combustivel_terrestre_rs: custo_combustivel_terrestre.toFixed(2),
         custo_combustivel_fluvial_rs: custo_combustivel_fluvial.toFixed(2), custo_total_rs: (custo_combustivel_terrestre + custo_combustivel_fluvial + custo_diarias).toFixed(2)
     };
-    viagemAtualParaCalculo.resultadoCalculado = resultado;
-    const indexSimulacao = simulacoesGuardadas.findIndex(s => s.viagem_id === id);
-    if (indexSimulacao > -1) simulacoesGuardadas[indexSimulacao] = resultado;
-    else simulacoesGuardadas.push(resultado);
-    atualizarContadorSimulacoes();
-    renderizarTabela();
-    document.getElementById('resultado-calculo-container').classList.remove('hidden');
-    renderChart(resultado, 'total');
-    showToast("Cálculo finalizado com sucesso!", 'success');
+
+    try {
+        const response = await fetch(`http://localhost:3000/viagens/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ ...viagemAtualParaCalculo, resultadoCalculado: resultado }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro ao salvar o cálculo na API.');
+        }
+
+        const viagemAtualizada = await response.json();
+        const indexSimulacao = simulacoesGuardadas.findIndex(s => s.viagem_id === id);
+        if (indexSimulacao > -1) simulacoesGuardadas[indexSimulacao] = resultado;
+        else simulacoesGuardadas.push(resultado);
+
+        viagemAtualParaCalculo.resultadoCalculado = resultado;
+        
+        atualizarContadorSimulacoes();
+        renderizarTabela();
+        document.getElementById('resultado-calculo-container').classList.remove('hidden');
+        renderChart(resultado, 'total');
+        showToast("Cálculo finalizado com sucesso!", 'success');
+
+    } catch (error) {
+        showToast(`Erro: ${error.message}`, 'error');
+    }
 }
 
 function renderChart(data, mode) {
@@ -425,41 +484,24 @@ function switchTab(tabName) {
     }
 }
 
-// Nova função para carregar dados da API (agora sem parâmetros de DOM)
-function carregarDadosDaAPI() {
-    return fetch('http://localhost:3000/viagens')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Falha ao carregar dados da API.');
-            }
-            return response.json();
-        })
-        .then(data => {
-            dadosCompletos = data.map((row, index) => ({
-                ...row,
-                row_id: index,
-                agencia: String(row.agencia || '').trim(), // Ajuste o nome da coluna para 'agencia'
-                municipio: String(row.municipio || '').trim(), // Ajuste o nome da coluna para 'municipio'
-                geocodigo: String(row.geocodigo || '').trim(),
-                distancia_sede: parseFloat(String(row.distancia_sede || '0').replace(',', '.')) || 0,
-                trajeto_diario: parseFloat(String(row.trajeto_diario || '0').replace(',', '.')) || 0,
-                estabelecimentos: parseInt(row.estabelecimentos, 10) || 0
-            }));
-            
-            // A inicialização da UI acontece aqui, depois que os dados foram carregados
-            const mainContent = document.getElementById('main-content');
-            const agenciaSelect = document.getElementById('agencia-select');
-
-            mainContent.classList.remove('disabled-section');
-            popularAgencias(agenciaSelect);
-        })
-        .catch(error => {
-            showToast(`Erro ao carregar dados da API: ${error.message}`, 'error');
-        });
+// ** FUNÇÃO PARA CARREGAR VIAGENS DO DB.JSON **
+async function carregarViagensDaAPI() {
+    try {
+        const response = await fetch('http://localhost:3000/viagens');
+        if (!response.ok) {
+            // Se a requisição falhar, retorne um array vazio
+            return [];
+        }
+        return await response.json();
+    } catch (error) {
+        showToast(`Erro ao carregar viagens da API: ${error.message}. Verifique se o json-server está rodando.`, 'error');
+        // Em caso de erro, também retorne um array vazio para evitar a quebra da aplicação
+        return [];
+    }
 }
 
 // Inicialização da Aplicação
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Variáveis e constantes do DOM
     const mainContent = document.getElementById('main-content');
     const agenciaSelect = document.getElementById('agencia-select');
@@ -499,12 +541,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const viewModalContent = document.getElementById('view-modal-content');
     const fecharViewModal = document.getElementById('fechar-view-modal');
     const toastContainer = document.getElementById('toast-container');
-
-        Papa.parse("Database.CSV", {
+    
+    // Carrega dados das agências do CSV
+    Papa.parse("Database.CSV", {
         download: true,
         header: true,
         skipEmptyLines: true,
-        complete: function(results) {
+        complete: async function(results) {
             const requiredHeaders = ['agencia', 'municipio', 'geocodigo', 'distancia_sede', 'trajeto_diario', 'estabelecimentos'];
             const actualHeaders = results.meta.fields;
             const missingHeaders = requiredHeaders.filter(h => !actualHeaders.includes(h));
@@ -515,23 +558,27 @@ document.addEventListener('DOMContentLoaded', () => {
             dadosCompletos = results.data.map((row, index) => ({
                 ...row,
                 row_id: index,
+                agencia: String(row.agencia || '').trim(),
+                municipio: String(row.municipio || '').trim(),
                 geocodigo: String(row.geocodigo || '').trim(),
                 distancia_sede: parseFloat(String(row.distancia_sede || '0').replace(',', '.')) || 0,
                 trajeto_diario: parseFloat(String(row.trajeto_diario || '0').replace(',', '.')) || 0,
                 estabelecimentos: parseInt(row.estabelecimentos, 10) || 0
             }));
             mainContent.classList.remove('disabled-section');
-            popularAgencias(agenciaSelect, mainContent);
+            popularAgencias(agenciaSelect);
+
+            // Carrega viagens registradas da API e renderiza a tabela
+            viagensRegistadas = await carregarViagensDaAPI();
+            renderizarTabela();
         },
         error: (err) => {
             showToast(`Erro ao carregar Database: ${err.message}`, 'error');
         }
     });
 
-    carregarDadosDaAPI();
-
     // Event Listeners
-    //fileInput.addEventListener('change', (e) => handleFileLoad(e));
+    //...
     agenciaSelect.addEventListener('change', () => atualizarMunicipios(agenciaSelect));
     municipioSelect.addEventListener('change', () => atualizarGeocodigos(municipioSelect));
     adicionarViagemBtn.addEventListener('click', () => adicionarViagem());
