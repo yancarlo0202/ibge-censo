@@ -47,46 +47,6 @@
       "CustoKm": 1.5,
       "ValorPedagio": 120,
       "Distancia": 1000
-    },
-    {
-      "id": 1757684578312,
-      "nomeServidor": "yan",
-      "siapeServidor": "123456",
-      "cargoServidor": "APM",
-      "agencia": "Parintins",
-      "municipio": "Barreirinha",
-      "setores": [
-        {
-          "agencia": "Parintins",
-          "municipio": "Barreirinha",
-          "geocodigo": "130050805000005",
-          "distancia_sede": 0.64,
-          "trajeto_diario": 45.53,
-          "estabelecimentos": 2,
-          "": "",
-          "row_id": 789
-        }
-      ]
-    },
-    {
-      "id": 1757685892518,
-      "nomeServidor": "Yan",
-      "siapeServidor": "012345",
-      "cargoServidor": "APM",
-      "agencia": "Tabatinga",
-      "municipio": "Tabatinga",
-      "setores": [
-        {
-          "agencia": "Tabatinga",
-          "municipio": "Tabatinga",
-          "geocodigo": "130406205000017",
-          "distancia_sede": 2.25,
-          "trajeto_diario": 34.42,
-          "estabelecimentos": 2,
-          "": "",
-          "row_id": 5453
-        }
-      ]
     }
   ]
 }

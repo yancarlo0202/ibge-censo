@@ -195,29 +195,44 @@ function renderizarTabela() {
     const viagensTableBody = document.getElementById('viagens-table-body');
     const placeholderRow = document.getElementById('placeholder-row');
     viagensTableBody.innerHTML = '';
-    if (viagensRegistadas.length === 0) {
-        viagensTableBody.appendChild(placeholderRow);
-        return;
-    }
+
+    // Garante que viagensRegistadas existe
+if (!Array.isArray(viagensRegistadas) || viagensRegistadas.length === 0) {
+    const placeholderRow = document.createElement('tr');
+    placeholderRow.innerHTML = `
+        <td colspan="5" class="text-center py-2 text-gray-500">
+            Nenhuma viagem registrada
+        </td>
+    `;
+    viagensTableBody.appendChild(placeholderRow);
+    return;
+}
+
+
     viagensRegistadas.forEach((viagem, index) => {
         const row = document.createElement('tr');
         const statusCalculo = viagem.resultadoCalculado ? 'bg-green-100' : '';
         const textoBotaoCalcular = viagem.resultadoCalculado ? 'Recalcular' : 'Calcular';
-        const corBotaoCalcular = viagem.resultadoCalculado ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' : 'bg-blue-100 text-blue-800 hover:bg-blue-200';
+        const corBotaoCalcular = viagem.resultadoCalculado
+            ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+            : 'bg-blue-500 text-white hover:bg-blue-600';
+
         row.className = statusCalculo;
-        row.innerHTML = `<td class="py-2 px-4 border-b text-sm">${index + 1}</td><td class="py-2 px-4 border-b text-sm">${viagem.nomeServidor} (${viagem.siapeServidor})</td><td class="py-2 px-4 border-b text-sm">${viagem.agencia}</td><td class="py-2 px-4 border-b text-sm">${viagem.municipio}</td><td class="py-2 px-4 border-b text-sm">${viagem.setores.length}</td><td class="py-2 px-4 border-b text-sm"><div class="flex space-x-2"><button data-index="${index}" class="calcular-viagem-btn ${corBotaoCalcular} text-xs font-semibold py-1 px-3 rounded-lg transition">${textoBotaoCalcular}</button><button data-index="${index}" class="visualizar-viagem-btn bg-gray-100 text-gray-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-gray-200 transition">Verificar</button><button data-index="${index}" class="excluir-viagem-btn bg-red-100 text-red-800 text-xs font-semibold py-1 px-3 rounded-lg hover:bg-red-200 transition">Remover</button></div></td>`;
+        row.innerHTML = `
+            <td class="py-2 px-4 border-b text-sm">${index + 1}</td>
+            <td class="py-2 px-4 border-b">${viagem.agencia || '-'}</td>
+            <td class="py-2 px-4 border-b">${viagem.municipio || '-'}</td>
+            <td class="py-2 px-4 border-b">${viagem.setores?.length || 0}</td>
+            <td class="py-2 px-4 border-b">
+                <button class="${corBotaoCalcular} px-3 py-1 rounded" onclick="calcularViagem(${index})">
+                    ${textoBotaoCalcular}
+                </button>
+            </td>
+        `;
         viagensTableBody.appendChild(row);
     });
-
-    document.querySelectorAll('.calcular-viagem-btn').forEach(btn => btn.addEventListener('click', (e) => {
-        const index = parseInt(e.target.dataset.index);
-        const viagem = viagensRegistadas[index];
-        if (viagem.resultadoCalculado && !confirm('Esta viagem já foi calculada. Deseja recalcular e sobrescrever o resultado anterior?')) return;
-        abrirVistaCalculo(viagem);
-    }));
-    document.querySelectorAll('.visualizar-viagem-btn').forEach(btn => btn.addEventListener('click', (e) => visualizarViagem(parseInt(e.target.dataset.index))));
-    document.querySelectorAll('.excluir-viagem-btn').forEach(btn => btn.addEventListener('click', (e) => excluirViagem(parseInt(e.target.dataset.index))));
 }
+
 
 function atualizarContadorSimulacoes() {
     const count = simulacoesGuardadas.length;
@@ -485,18 +500,14 @@ function switchTab(tabName) {
 }
 
 // ** FUNÇÃO PARA CARREGAR VIAGENS DO DB.JSON **
-async function carregarViagensDaAPI() {
+async function carregarViagens() {
     try {
         const response = await fetch('http://localhost:3000/viagens');
-        if (!response.ok) {
-            // Se a requisição falhar, retorne um array vazio
-            return [];
-        }
-        return await response.json();
+        if (!response.ok) throw new Error("Erro ao carregar viagens da API.");
+        viagensRegistadas = await response.json();
+        renderizarTabela();
     } catch (error) {
-        showToast(`Erro ao carregar viagens da API: ${error.message}. Verifique se o json-server está rodando.`, 'error');
-        // Em caso de erro, também retorne um array vazio para evitar a quebra da aplicação
-        return [];
+        showToast(`Erro: ${error.message}`, 'error');
     }
 }
 
@@ -569,7 +580,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             popularAgencias(agenciaSelect);
 
             // Carrega viagens registradas da API e renderiza a tabela
-            viagensRegistadas = await carregarViagensDaAPI();
+            viagensRegistadas = await carregarViagens();
+            console.log("viagensRegistadas antes da tabela:", viagensRegistadas);
             renderizarTabela();
         },
         error: (err) => {
