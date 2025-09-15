@@ -92,7 +92,6 @@ function atualizarGeocodigos(municipioSelect) {
     setoresContainerWrapper.classList.remove('disabled-section');
 }
 
-// ** FUNÇÃO ADICIONAR VIAGEM ATUALIZADA (CREATE) **
 async function adicionarViagem() {
     const nomeServidor = document.getElementById('nome-servidor').value;
     const siapeServidor = document.getElementById('siape-servidor').value;
@@ -141,7 +140,6 @@ async function adicionarViagem() {
     }
 }
 
-// ** FUNÇÃO EXCLUIR VIAGEM ATUALIZADA (DELETE) **
 async function excluirViagem(index) {
     if (confirm('Tem a certeza de que pretende excluir esta viagem?')) {
         const viagemRemovida = viagensRegistadas[index];
@@ -170,7 +168,6 @@ async function excluirViagem(index) {
     }
 }
 
-
 function visualizarViagem(index) {
     const viagem = viagensRegistadas[index];
     const soma_estabelecimentos = viagem.setores.reduce((acc, s) => acc + (Number(s.estabelecimentos) || 0), 0);
@@ -193,46 +190,39 @@ function visualizarViagem(index) {
 
 function renderizarTabela() {
     const viagensTableBody = document.getElementById('viagens-table-body');
-    const placeholderRow = document.getElementById('placeholder-row');
-    viagensTableBody.innerHTML = '';
+    if (!viagensTableBody) {
+        console.error("Elemento com ID 'viagens-table-body' não encontrado.");
+        return;
+    }
+    viagensTableBody.innerHTML = ''; // Limpa o conteúdo atual
 
-    // Garante que viagensRegistadas existe
-if (!Array.isArray(viagensRegistadas) || viagensRegistadas.length === 0) {
-    const placeholderRow = document.createElement('tr');
-    placeholderRow.innerHTML = `
-        <td colspan="5" class="text-center py-2 text-gray-500">
-            Nenhuma viagem registrada
-        </td>
-    `;
-    viagensTableBody.appendChild(placeholderRow);
-    return;
-}
-
+    if (!Array.isArray(viagensRegistadas) || viagensRegistadas.length === 0) {
+        const placeholderRow = document.createElement('tr');
+        placeholderRow.innerHTML = `
+            <td colspan="6" class="text-center py-4 text-gray-500">
+                Nenhuma viagem registrada
+            </td>
+        `;
+        viagensTableBody.appendChild(placeholderRow);
+        return;
+    }
 
     viagensRegistadas.forEach((viagem, index) => {
         const row = document.createElement('tr');
-        const statusCalculo = viagem.resultadoCalculado ? 'bg-green-100' : '';
-        const textoBotaoCalcular = viagem.resultadoCalculado ? 'Recalcular' : 'Calcular';
-        const corBotaoCalcular = viagem.resultadoCalculado
-            ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-            : 'bg-blue-500 text-white hover:bg-blue-600';
-
-        row.className = statusCalculo;
+        // Adiciona a linha de forma segura, verificando se 'setores' existe
         row.innerHTML = `
             <td class="py-2 px-4 border-b text-sm">${index + 1}</td>
-            <td class="py-2 px-4 border-b">${viagem.agencia || '-'}</td>
-            <td class="py-2 px-4 border-b">${viagem.municipio || '-'}</td>
-            <td class="py-2 px-4 border-b">${viagem.setores?.length || 0}</td>
+            <td class="py-2 px-4 border-b">${viagem.nomeServidor} (${viagem.siapeServidor})</td>
+            <td class="py-2 px-4 border-b">${viagem.agencia}</td>
+            <td class="py-2 px-4 border-b">${viagem.municipio}</td>
+            <td class="py-2 px-4 border-b">${viagem.setores ? viagem.setores.length : 0}</td>
             <td class="py-2 px-4 border-b">
-                <button class="${corBotaoCalcular} px-3 py-1 rounded" onclick="calcularViagem(${index})">
-                    ${textoBotaoCalcular}
-                </button>
+                <button class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition-colors" onclick="visualizarViagem(${index})">Ver</button>
             </td>
         `;
         viagensTableBody.appendChild(row);
     });
 }
-
 
 function atualizarContadorSimulacoes() {
     const count = simulacoesGuardadas.length;
@@ -257,18 +247,14 @@ function resetarFormularioCadastro() {
 
 function abrirVistaCalculo(viagem) {
     viagemAtualParaCalculo = viagem;
-    const calculoView = document.getElementById('calculo-view');
-    const cadastroView = document.getElementById('cadastro-view');
-    const tabCadastro = document.getElementById('tab-cadastro');
-    const tabCalculadora = document.getElementById('tab-calculadora');
+    switchTab('calculadora');
+
     const tripDetailsHeader = document.getElementById('trip-details-header');
     const tripSummary = document.getElementById('trip-summary');
     const veiculoOptionsContainerCalc = document.getElementById('veiculo-options-container-calc');
     const custosContainerCalc = document.getElementById('custos-container-calc');
     const resultadoCalculoContainer = document.getElementById('resultado-calculo-container');
     const { nomeServidor, siapeServidor, agencia, municipio, setores } = viagem;
-
-    switchTab('calculadora');
 
     tripDetailsHeader.textContent = `${municipio} - ${agencia}`;
     const soma_estabelecimentos = setores.reduce((acc, s) => acc + (Number(s.estabelecimentos) || 0), 0);
@@ -285,7 +271,6 @@ function abrirVistaCalculo(viagem) {
     resultadoCalculoContainer.classList.add('hidden');
 }
 
-// ** FUNÇÃO FINALIZAR CÁLCULO ATUALIZADA (UPDATE) **
 async function finalizarCalculo(distancia_terrestre = 0, distancia_fluvial = 0, dias_diaria_terrestre = 0, dias_diaria_fluvial = 0) {
     const { id, nomeServidor, siapeServidor, cargoServidor, agencia, municipio, setores } = viagemAtualParaCalculo;
     const { soma_estabelecimentos, dias_viagem, distancia_total } = viagemAtualParaCalculo.calculoBase;
@@ -499,60 +484,22 @@ function switchTab(tabName) {
     }
 }
 
-// ** FUNÇÃO PARA CARREGAR VIAGENS DO DB.JSON **
 async function carregarViagens() {
     try {
         const response = await fetch('http://localhost:3000/viagens');
-        if (!response.ok) throw new Error("Erro ao carregar viagens da API.");
+        if (!response.ok) {
+            throw new Error("Erro ao carregar viagens da API.");
+        }
         viagensRegistadas = await response.json();
         renderizarTabela();
     } catch (error) {
         showToast(`Erro: ${error.message}`, 'error');
+        console.error("Erro ao carregar os dados:", error);
     }
 }
 
 // Inicialização da Aplicação
 document.addEventListener('DOMContentLoaded', async () => {
-    // Variáveis e constantes do DOM
-    const mainContent = document.getElementById('main-content');
-    const agenciaSelect = document.getElementById('agencia-select');
-    const municipioContainer = document.getElementById('municipio-container');
-    const municipioSelect = document.getElementById('municipio-select');
-    const setoresContainerWrapper = document.getElementById('setores-container-wrapper');
-    const geocodigosContainer = document.getElementById('geocodigos-container');
-    const adicionarViagemBtn = document.getElementById('adicionar-viagem-btn');
-    const viagensTableBody = document.getElementById('viagens-table-body');
-    const placeholderRow = document.getElementById('placeholder-row');
-    const terminarBtn = document.getElementById('terminar-btn');
-    const simulacoesGuardadasTexto = document.getElementById('simulacoes-guardadas-texto');
-    const cadastroView = document.getElementById('cadastro-view');
-    const calculoView = document.getElementById('calculo-view');
-    const voltarBtn = document.getElementById('voltar-btn');
-    const tripDetailsHeader = document.getElementById('trip-details-header');
-    const tripSummary = document.getElementById('trip-summary');
-    const modalidadeContainerCalc = document.getElementById('modalidade-container-calc');
-    const veiculoOptionsContainerCalc = document.getElementById('veiculo-options-container-calc');
-    const custosContainerCalc = document.getElementById('custos-container-calc');
-    const finalizarCalculoBtn = document.getElementById('finalizar-calculo-btn');
-    const resultadoCalculoContainer = document.getElementById('resultado-calculo-container');
-    const chartTotalBtn = document.getElementById('chart-total-btn');
-    const chartDiarioBtn = document.getElementById('chart-diario-btn');
-    const mistoModalBackdrop = document.getElementById('misto-modal-backdrop');
-    const distanciaTotalMisto = document.getElementById('distancia-total-misto');
-    const diasTotaisMisto = document.getElementById('dias-totais-misto');
-    const distanciaTerrestreInput = document.getElementById('distancia-terrestre');
-    const distanciaFluvialInput = document.getElementById('distancia-fluvial');
-    const diasDiariaTerrestreMistoInput = document.getElementById('dias-diaria-terrestre-misto');
-    const diasDiariaFluvialMistoInput = document.getElementById('dias-diaria-fluvial-misto');
-    const cancelarMistoBtn = document.getElementById('cancelar-misto-btn');
-    const confirmarMistoBtn = document.getElementById('confirmar-misto-btn');
-    const tabCadastro = document.getElementById('tab-cadastro');
-    const tabCalculadora = document.getElementById('tab-calculadora');
-    const viewModalBackdrop = document.getElementById('view-modal-backdrop');
-    const viewModalContent = document.getElementById('view-modal-content');
-    const fecharViewModal = document.getElementById('fechar-view-modal');
-    const toastContainer = document.getElementById('toast-container');
-    
     // Carrega dados das agências do CSV
     Papa.parse("Database.CSV", {
         download: true,
@@ -576,13 +523,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 trajeto_diario: parseFloat(String(row.trajeto_diario || '0').replace(',', '.')) || 0,
                 estabelecimentos: parseInt(row.estabelecimentos, 10) || 0
             }));
-            mainContent.classList.remove('disabled-section');
-            popularAgencias(agenciaSelect);
-
-            // Carrega viagens registradas da API e renderiza a tabela
-            viagensRegistadas = await carregarViagens();
-            console.log("viagensRegistadas antes da tabela:", viagensRegistadas);
-            renderizarTabela();
+            document.getElementById('main-content').classList.remove('disabled-section');
+            popularAgencias(document.getElementById('agencia-select'));
+            
+            // Chama a função para carregar as viagens, que já chama renderizarTabela()
+            await carregarViagens();
         },
         error: (err) => {
             showToast(`Erro ao carregar Database: ${err.message}`, 'error');
@@ -590,35 +535,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Event Listeners
-    //...
-    agenciaSelect.addEventListener('change', () => atualizarMunicipios(agenciaSelect));
-    municipioSelect.addEventListener('change', () => atualizarGeocodigos(municipioSelect));
-    adicionarViagemBtn.addEventListener('click', () => adicionarViagem());
-    terminarBtn.addEventListener('click', () => descarregarCSV());
-    voltarBtn.addEventListener('click', () => voltarParaLista());
-    modalidadeContainerCalc.addEventListener('change', (e) => updateModalidadeOptionsCalc(e));
-    finalizarCalculoBtn.addEventListener('click', () => {
+    document.getElementById('agencia-select').addEventListener('change', (e) => atualizarMunicipios(e.target));
+    document.getElementById('municipio-select').addEventListener('change', (e) => atualizarGeocodigos(e.target));
+    document.getElementById('adicionar-viagem-btn').addEventListener('click', () => adicionarViagem());
+    document.getElementById('terminar-btn').addEventListener('click', () => descarregarCSV());
+    document.getElementById('voltar-btn').addEventListener('click', () => voltarParaLista());
+    document.getElementById('modalidade-container-calc').addEventListener('change', (e) => updateModalidadeOptionsCalc(e));
+    document.getElementById('finalizar-calculo-btn').addEventListener('click', () => {
         const modalidade = document.querySelector('input[name="modalidade_calc"]:checked')?.value;
         if (modalidade === 'misto') {
             const { distancia_total, dias_viagem } = viagemAtualParaCalculo.calculoBase;
-            distanciaTotalMisto.textContent = distancia_total.toFixed(2);
-            diasTotaisMisto.textContent = dias_viagem;
-            distanciaTerrestreInput.value = '';
-            distanciaFluvialInput.value = '';
-            diasDiariaTerrestreMistoInput.value = '';
-            diasDiariaFluvialMistoInput.value = '';
-            mistoModalBackdrop.classList.remove('hidden');
-            mistoModalBackdrop.classList.add('flex');
+            document.getElementById('distancia-total-misto').textContent = distancia_total.toFixed(2);
+            document.getElementById('dias-totais-misto').textContent = dias_viagem;
+            document.getElementById('distancia-terrestre').value = '';
+            document.getElementById('distancia-fluvial').value = '';
+            document.getElementById('dias-diaria-terrestre-misto').value = '';
+            document.getElementById('dias-diaria-fluvial-misto').value = '';
+            document.getElementById('misto-modal-backdrop').classList.remove('hidden');
+            document.getElementById('misto-modal-backdrop').classList.add('flex');
         } else {
             finalizarCalculo();
         }
     });
-    cancelarMistoBtn.addEventListener('click', () => mistoModalBackdrop.classList.add('hidden'));
-    confirmarMistoBtn.addEventListener('click', () => {
-        const distT = parseFloat(distanciaTerrestreInput.value) || 0;
-        const distF = parseFloat(distanciaFluvialInput.value) || 0;
-        const diasT = parseInt(diasDiariaTerrestreMistoInput.value, 10) || 0;
-        const diasF = parseInt(diasDiariaFluvialMistoInput.value, 10) || 0;
+    document.getElementById('cancelar-misto-btn').addEventListener('click', () => document.getElementById('misto-modal-backdrop').classList.add('hidden'));
+    document.getElementById('confirmar-misto-btn').addEventListener('click', () => {
+        const distT = parseFloat(document.getElementById('distancia-terrestre').value) || 0;
+        const distF = parseFloat(document.getElementById('distancia-fluvial').value) || 0;
+        const diasT = parseInt(document.getElementById('dias-diaria-terrestre-misto').value, 10) || 0;
+        const diasF = parseInt(document.getElementById('dias-diaria-fluvial-misto').value, 10) || 0;
         const totalDist = parseFloat(viagemAtualParaCalculo.calculoBase.distancia_total);
         const totalDias = viagemAtualParaCalculo.calculoBase.dias_viagem;
         if (Math.abs((distT + distF) - totalDist) > 0.01) {
@@ -629,31 +573,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             showToast(`As diárias não podem exceder o total de dias da viagem (${totalDias}).`, 'error');
             return;
         }
-        mistoModalBackdrop.classList.add('hidden');
+        document.getElementById('misto-modal-backdrop').classList.add('hidden');
         finalizarCalculo(distT, distF, diasT, diasF);
     });
-    distanciaTerrestreInput.addEventListener('input', (e) => {
+    document.getElementById('distancia-terrestre').addEventListener('input', (e) => {
         const distT = parseFloat(e.target.value) || 0;
         const total = parseFloat(viagemAtualParaCalculo.calculoBase.distancia_total);
-        distanciaFluvialInput.value = Math.max(0, total - distT).toFixed(2);
+        document.getElementById('distancia-fluvial').value = Math.max(0, total - distT).toFixed(2);
     });
-    distanciaFluvialInput.addEventListener('input', (e) => {
+    document.getElementById('distancia-fluvial').addEventListener('input', (e) => {
         const distF = parseFloat(e.target.value) || 0;
         const total = parseFloat(viagemAtualParaCalculo.calculoBase.distancia_total);
-        distanciaTerrestreInput.value = Math.max(0, total - distF).toFixed(2);
+        document.getElementById('distancia-terrestre').value = Math.max(0, total - distF).toFixed(2);
     });
-    chartTotalBtn.addEventListener('click', () => renderChart(viagemAtualParaCalculo.resultadoCalculado, 'total'));
-    chartDiarioBtn.addEventListener('click', () => renderChart(viagemAtualParaCalculo.resultadoCalculado, 'diario'));
-    tabCadastro.addEventListener('click', () => switchTab('cadastro'));
-    tabCalculadora.addEventListener('click', () => {
+    document.getElementById('chart-total-btn').addEventListener('click', () => renderChart(viagemAtualParaCalculo.resultadoCalculado, 'total'));
+    document.getElementById('chart-diario-btn').addEventListener('click', () => renderChart(viagemAtualParaCalculo.resultadoCalculado, 'diario'));
+    document.getElementById('tab-cadastro').addEventListener('click', () => switchTab('cadastro'));
+    document.getElementById('tab-calculadora').addEventListener('click', () => {
         if (!viagemAtualParaCalculo) {
             showToast("Primeiro, clique em 'Calcular' numa viagem da lista.", 'info');
             return;
         }
         switchTab('calculadora');
     });
-    fecharViewModal.addEventListener('click', () => {
-        viewModalBackdrop.classList.remove('flex');
-        viewModalBackdrop.classList.add('hidden');
+    document.getElementById('fechar-view-modal').addEventListener('click', () => {
+        document.getElementById('view-modal-backdrop').classList.remove('flex');
+        document.getElementById('view-modal-backdrop').classList.add('hidden');
     });
 });
