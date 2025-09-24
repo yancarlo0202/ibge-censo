@@ -576,7 +576,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('misto-modal-backdrop').classList.add('flex');
     } else {
         await finalizarCalculo();
-        switchTab('calculadora');
     }
 });
     document.getElementById('cancelar-misto-btn').addEventListener('click', () => document.getElementById('misto-modal-backdrop').classList.add('hidden'));
