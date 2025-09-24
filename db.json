@@ -1,50 +1,6 @@
 {
   "viagens": [
     {
-      "id": "1758287361504",
-      "nomeServidor": "Yan Carlo Vieira Braga",
-      "siapeServidor": "123456",
-      "cargoServidor": "Pesquisador",
-      "agencia": "S�o Gabriel da Cachoeira",
-      "municipio": "Barcelos",
-      "setores": [
-        {
-          "agencia": "S�o Gabriel da Cachoeira",
-          "municipio": "Barcelos",
-          "geocodigo": "130040905000014",
-          "distancia_sede": 30.43,
-          "trajeto_diario": 0,
-          "estabelecimentos": 2,
-          "": "",
-          "row_id": 575
-        }
-      ],
-      "resultadoCalculado": {
-        "viagem_id": "1758287361504",
-        "Nº Viagem": 1,
-        "nome_servidor": "Yan Carlo Vieira Braga",
-        "siape": "123456",
-        "cargo": "Pesquisador",
-        "agencia": "S�o Gabriel da Cachoeira",
-        "municipio": "Barcelos",
-        "geocodigos_selecionados": "\"130040905000014\"",
-        "soma_estabelecimentos": 2,
-        "dias_viagem_calculado": 1,
-        "modalidade": "terrestre",
-        "veiculo_terrestre": "4x4",
-        "motor_fluvial": "",
-        "distancia_total_km": "60.86",
-        "distancia_terrestre_km": "60.86",
-        "distancia_fluvial_km": "0.00",
-        "dias_com_diaria_terrestre": 1,
-        "dias_com_diaria_fluvial": 0,
-        "custo_diarias_rs": "100.00",
-        "custo_combustivel_terrestre_rs": "42.60",
-        "custo_combustivel_fluvial_rs": "0.00",
-        "custo_total_rs": "142.60"
-      }
-    },
-    {
       "id": "1758288560975",
       "nomeServidor": "Yan Carlo Vieira Braga",
       "siapeServidor": "123456",
@@ -65,7 +21,7 @@
       ],
       "resultadoCalculado": {
         "viagem_id": "1758288560975",
-        "Nº Viagem": 2,
+        "Nº Viagem": 1,
         "nome_servidor": "Yan Carlo Vieira Braga",
         "siape": "123456",
         "cargo": "Pesquisador",
@@ -86,50 +42,6 @@
         "custo_combustivel_terrestre_rs": "0.00",
         "custo_combustivel_fluvial_rs": "105.32",
         "custo_total_rs": "405.32"
-      }
-    },
-    {
-      "id": "1758289867785",
-      "nomeServidor": "Yan Carlo Vieira Braga",
-      "siapeServidor": "123456",
-      "cargoServidor": "Pesquisador",
-      "agencia": "Tef�",
-      "municipio": "Uarini",
-      "setores": [
-        {
-          "agencia": "Tef�",
-          "municipio": "Uarini",
-          "geocodigo": "130426005000007",
-          "distancia_sede": 4.78,
-          "trajeto_diario": 17.23,
-          "estabelecimentos": 147,
-          "": "",
-          "row_id": 5824
-        }
-      ],
-      "resultadoCalculado": {
-        "viagem_id": "1758289867785",
-        "Nº Viagem": 3,
-        "nome_servidor": "Yan Carlo Vieira Braga",
-        "siape": "123456",
-        "cargo": "Pesquisador",
-        "agencia": "Tef�",
-        "municipio": "Uarini",
-        "geocodigos_selecionados": "\"130426005000007\"",
-        "soma_estabelecimentos": 147,
-        "dias_viagem_calculado": 37,
-        "modalidade": "misto",
-        "veiculo_terrestre": "4x4",
-        "motor_fluvial": "13 HP",
-        "distancia_total_km": "647.07",
-        "distancia_terrestre_km": "13.00",
-        "distancia_fluvial_km": "634.07",
-        "dias_com_diaria_terrestre": 3,
-        "dias_com_diaria_fluvial": 1,
-        "custo_diarias_rs": "750.00",
-        "custo_combustivel_terrestre_rs": "9.10",
-        "custo_combustivel_fluvial_rs": "1268.14",
-        "custo_total_rs": "2027.24"
       }
     }
   ]

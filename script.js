@@ -397,7 +397,7 @@ async function finalizarCalculo(distancia_terrestre = 0, distancia_fluvial = 0, 
             throw new Error('Erro ao salvar o cálculo na API.');
         }
 
-        const viagemAtualizada = await response.json();
+        
         const indexSimulacao = simulacoesGuardadas.findIndex(s => s.viagem_id === id);
         if (indexSimulacao > -1) {
             simulacoesGuardadas[indexSimulacao] = resultado;
@@ -408,7 +408,7 @@ async function finalizarCalculo(distancia_terrestre = 0, distancia_fluvial = 0, 
         viagensRegistadas[viagemAtualParaCalculo.index].resultadoCalculado = resultado;
         
         atualizarContadorSimulacoes();
-        renderizarTabela();
+        
         document.getElementById('resultado-calculo-container').classList.remove('hidden');
         renderChart(resultado, 'total');
         showToast("Cálculo finalizado com sucesso!", 'success');
@@ -499,7 +499,19 @@ async function carregarViagens() {
             throw new Error("Erro ao carregar viagens da API.");
         }
         viagensRegistadas = await response.json();
+
+        // Limpa a lista de simulações antes de carregar
+        simulacoesGuardadas = [];
+        
+        // Adiciona as simulações guardadas à lista
+        viagensRegistadas.forEach(viagem => {
+            if (viagem.resultadoCalculado) {
+                simulacoesGuardadas.push(viagem.resultadoCalculado);
+            }
+        });
+        
         renderizarTabela();
+        atualizarContadorSimulacoes(); // Atualiza o contador e habilita o botão de download
     } catch (error) {
         showToast(`Erro: ${error.message}`, 'error');
         console.error("Erro ao carregar os dados:", error);
@@ -549,11 +561,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('terminar-btn').addEventListener('click', () => descarregarCSV());
     document.getElementById('voltar-btn').addEventListener('click', () => voltarParaLista());
     document.getElementById('modalidade-container-calc').addEventListener('change', (e) => updateModalidadeOptionsCalc(e));
-    document.getElementById('finalizar-calculo-btn').addEventListener('click', async () => {
+
+    document.getElementById('finalizar-calculo-btn').addEventListener('click', async (event) => {
+    event.preventDefault();
     const modalidade = document.querySelector('input[name="modalidade_calc"]:checked')?.value;
     if (modalidade === 'misto') {
-        const { distancia_total, dias_viagem } = viagemAtualParaCalculo.calculoBase;
-        document.getElementById('distancia-total-misto').textContent = distancia_total.toFixed(2);
+         document.getElementById('distancia-total-misto').textContent = distancia_total.toFixed(2);
         document.getElementById('dias-totais-misto').textContent = dias_viagem;
         document.getElementById('distancia-terrestre').value = '';
         document.getElementById('distancia-fluvial').value = '';
