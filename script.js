@@ -8,18 +8,18 @@ let viagemAtualParaCalculo = null;
 let costsChart = null;
 
 // Funções da aplicação
-function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = message;
-    const typeClasses = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500' };
-    toast.classList.add(typeClasses[type] || typeClasses.info);
-    const toastContainer = document.getElementById('toast-container');
-    if (toastContainer) {
-        toastContainer.appendChild(toast);
-        setTimeout(() => { toast.remove(); }, 5000);
-    }
-}
+ function showToast(message, type = 'info') {
+     const toast = document.createElement('div');
+     toast.className = 'toast';
+     toast.textContent = message;
+     const typeClasses = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500' };
+     toast.classList.add(typeClasses[type] || typeClasses.info);
+     const toastContainer = document.getElementById('toast-container');
+     if (toastContainer) {
+         toastContainer.appendChild(toast);
+         setTimeout(() => { toast.remove(); }, 5000);
+     }
+ }
 
 function normalizeHeader(h) {
     const header = h.trim().toLowerCase().replace(/_/g, '');
@@ -101,7 +101,6 @@ async function adicionarViagem() {
     const selectedIds = Array.from(document.querySelectorAll('#geocodigos-container input:checked')).map(cb => parseInt(cb.value, 10));
 
     if (!nomeServidor || !siapeServidor || !cargoServidor || !agencia || !municipio || selectedIds.length === 0) {
-        showToast("Por favor, preencha todos os campos e selecione pelo menos um setor.", 'error');
         return;
     }
 
@@ -131,7 +130,6 @@ async function adicionarViagem() {
 
         const viagemSalva = await response.json();
         viagensRegistadas.push(viagemSalva);
-        showToast("Viagem adicionada e salva na API com sucesso!", 'success');
         renderizarTabela();
         resetarFormularioCadastro();
 
@@ -158,7 +156,6 @@ async function excluirViagem(index) {
             if (indexSimulacao !== -1) {
                 simulacoesGuardadas.splice(indexSimulacao, 1);
             }
-            showToast("Viagem removida com sucesso!", 'success');
             renderizarTabela();
             atualizarContadorSimulacoes();
 
@@ -411,7 +408,6 @@ async function finalizarCalculo(distancia_terrestre = 0, distancia_fluvial = 0, 
         
         document.getElementById('resultado-calculo-container').classList.remove('hidden');
         renderChart(resultado, 'total');
-        showToast("Cálculo finalizado com sucesso!", 'success');
     } catch (error) {
         showToast(`Erro: ${error.message}`, 'error');
     }
@@ -461,7 +457,6 @@ function descarregarCSV() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast("Download do CSV iniciado!", 'success');
 }
 
 function voltarParaLista() {
@@ -563,21 +558,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('modalidade-container-calc').addEventListener('change', (e) => updateModalidadeOptionsCalc(e));
 
     document.getElementById('finalizar-calculo-btn').addEventListener('click', async (event) => {
-    event.preventDefault();
-    const modalidade = document.querySelector('input[name="modalidade_calc"]:checked')?.value;
-    if (modalidade === 'misto') {
-         document.getElementById('distancia-total-misto').textContent = distancia_total.toFixed(2);
-        document.getElementById('dias-totais-misto').textContent = dias_viagem;
-        document.getElementById('distancia-terrestre').value = '';
-        document.getElementById('distancia-fluvial').value = '';
-        document.getElementById('dias-diaria-terrestre-misto').value = '';
-        document.getElementById('dias-diaria-fluvial-misto').value = '';
-        document.getElementById('misto-modal-backdrop').classList.remove('hidden');
-        document.getElementById('misto-modal-backdrop').classList.add('flex');
-    } else {
-        await finalizarCalculo();
-    }
-});
+        event.preventDefault();
+        const modalidade = document.querySelector('input[name="modalidade_calc"]:checked')?.value;
+        if (modalidade === 'misto') {
+            // Correção: Acessa a propriedade distancia_total do objeto viagemAtualParaCalculo
+            document.getElementById('distancia-total-misto').textContent = viagemAtualParaCalculo.calculoBase.distancia_total.toFixed(2);
+            // Correção: Acessa a propriedade dias_viagem do objeto viagemAtualParaCalculo
+            document.getElementById('dias-totais-misto').textContent = viagemAtualParaCalculo.calculoBase.dias_viagem;
+            document.getElementById('distancia-terrestre').value = '';
+            document.getElementById('distancia-fluvial').value = '';
+            document.getElementById('dias-diaria-terrestre-misto').value = '';
+            document.getElementById('dias-diaria-fluvial-misto').value = '';
+            document.getElementById('misto-modal-backdrop').classList.remove('hidden');
+            document.getElementById('misto-modal-backdrop').classList.add('flex');
+        } else {
+            await finalizarCalculo();
+        }
+    });
+    
     document.getElementById('cancelar-misto-btn').addEventListener('click', () => document.getElementById('misto-modal-backdrop').classList.add('hidden'));
     document.getElementById('confirmar-misto-btn').addEventListener('click', () => {
         const distT = parseFloat(document.getElementById('distancia-terrestre').value) || 0;
