@@ -222,52 +222,52 @@ function renderizarTabela() {
     });
 }
 
-function renderChart(data, mode) {
-    const ctx = document.getElementById('costs-chart').getContext('2d');
-    if (costsChart) {
-        costsChart.destroy();
-    }
+// function renderChart(data, mode) {
+//     const ctx = document.getElementById('costs-chart').getContext('2d');
+//     if (costsChart) {
+//         costsChart.destroy();
+//     }
 
-    let labels, chartData;
-    if (mode === 'total') {
-        labels = ['Custo de Combustível', 'Custo de Diárias'];
-        const custo_combustivel = parseFloat(data.custo_combustivel_terrestre_rs) + parseFloat(data.custo_combustivel_fluvial_rs);
-        chartData = [custo_combustivel.toFixed(2), parseFloat(data.custo_diarias_rs).toFixed(2)];
-    } else if (mode === 'diario') {
-        const dias_totais = data.dias_com_diaria_terrestre + data.dias_com_diaria_fluvial;
-        labels = ['Custo Diário Total'];
-        const custo_total = parseFloat(data.custo_total_rs);
-        chartData = [dias_totais > 0 ? (custo_total / dias_totais).toFixed(2) : 0];
-    }
+//     let labels, chartData;
+//     if (mode === 'total') {
+//         labels = ['Custo de Combustível', 'Custo de Diárias'];
+//         const custo_combustivel = parseFloat(data.custo_combustivel_terrestre_rs) + parseFloat(data.custo_combustivel_fluvial_rs);
+//         chartData = [custo_combustivel.toFixed(2), parseFloat(data.custo_diarias_rs).toFixed(2)];
+//     } else if (mode === 'diario') {
+//         const dias_totais = data.dias_com_diaria_terrestre + data.dias_com_diaria_fluvial;
+//         labels = ['Custo Diário Total'];
+//         const custo_total = parseFloat(data.custo_total_rs);
+//         chartData = [dias_totais > 0 ? (custo_total / dias_totais).toFixed(2) : 0];
+//     }
 
-    costsChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: `Custos da Viagem - ${mode === 'total' ? 'Total' : 'Diário'}`,
-                data: chartData,
-                backgroundColor: [
-                    'rgba(59, 130, 246, 0.5)',
-                    'rgba(139, 92, 246, 0.5)'
-                ],
-                borderColor: [
-                    'rgba(59, 130, 246, 1)',
-                    'rgba(139, 92, 246, 1)'
-                ],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-}
+//     costsChart = new Chart(ctx, {
+//         type: 'bar',
+//         data: {
+//             labels: labels,
+//             datasets: [{
+//                 label: `Custos da Viagem - ${mode === 'total' ? 'Total' : 'Diário'}`,
+//                 data: chartData,
+//                 backgroundColor: [
+//                     'rgba(59, 130, 246, 0.5)',
+//                     'rgba(139, 92, 246, 0.5)'
+//                 ],
+//                 borderColor: [
+//                     'rgba(59, 130, 246, 1)',
+//                     'rgba(139, 92, 246, 1)'
+//                 ],
+//                 borderWidth: 1
+//             }]
+//         },
+//         options: {
+//             responsive: true,
+//             scales: {
+//                 y: {
+//                     beginAtZero: true
+//                 }
+//             }
+//         }
+//     });
+// }
 
 function atualizarContadorSimulacoes() {
     const count = simulacoesGuardadas.length;
@@ -394,20 +394,9 @@ async function finalizarCalculo(distancia_terrestre = 0, distancia_fluvial = 0, 
             throw new Error('Erro ao salvar o cálculo na API.');
         }
 
-        
-        const indexSimulacao = simulacoesGuardadas.findIndex(s => s.viagem_id === id);
-        if (indexSimulacao > -1) {
-            simulacoesGuardadas[indexSimulacao] = resultado;
-        } else {
-            simulacoesGuardadas.push(resultado);
-        }
-
         viagensRegistadas[viagemAtualParaCalculo.index].resultadoCalculado = resultado;
         
         atualizarContadorSimulacoes();
-        
-        document.getElementById('resultado-calculo-container').classList.remove('hidden');
-        renderChart(resultado, 'total');
     } catch (error) {
         showToast(`Erro: ${error.message}`, 'error');
     }
@@ -605,8 +594,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const total = parseFloat(viagemAtualParaCalculo.calculoBase.distancia_total);
         document.getElementById('distancia-terrestre').value = Math.max(0, total - distF).toFixed(2);
     });
-    document.getElementById('chart-total-btn').addEventListener('click', () => renderChart(viagemAtualParaCalculo.resultadoCalculado, 'total'));
-    document.getElementById('chart-diario-btn').addEventListener('click', () => renderChart(viagemAtualParaCalculo.resultadoCalculado, 'diario'));
+    // document.getElementById('chart-total-btn').addEventListener('click', () => renderChart(viagemAtualParaCalculo.resultadoCalculado, 'total'));
+    // document.getElementById('chart-diario-btn').addEventListener('click', () => renderChart(viagemAtualParaCalculo.resultadoCalculado, 'diario'));
     document.getElementById('tab-cadastro').addEventListener('click', () => switchTab('cadastro'));
     document.getElementById('tab-calculadora').addEventListener('click', () => {
         console.log("Botão 'Finalizar Cálculo' clicado.");
