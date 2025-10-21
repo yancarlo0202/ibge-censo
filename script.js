@@ -222,53 +222,6 @@ function renderizarTabela() {
     });
 }
 
-// function renderChart(data, mode) {
-//     const ctx = document.getElementById('costs-chart').getContext('2d');
-//     if (costsChart) {
-//         costsChart.destroy();
-//     }
-
-//     let labels, chartData;
-//     if (mode === 'total') {
-//         labels = ['Custo de Combustível', 'Custo de Diárias'];
-//         const custo_combustivel = parseFloat(data.custo_combustivel_terrestre_rs) + parseFloat(data.custo_combustivel_fluvial_rs);
-//         chartData = [custo_combustivel.toFixed(2), parseFloat(data.custo_diarias_rs).toFixed(2)];
-//     } else if (mode === 'diario') {
-//         const dias_totais = data.dias_com_diaria_terrestre + data.dias_com_diaria_fluvial;
-//         labels = ['Custo Diário Total'];
-//         const custo_total = parseFloat(data.custo_total_rs);
-//         chartData = [dias_totais > 0 ? (custo_total / dias_totais).toFixed(2) : 0];
-//     }
-
-//     costsChart = new Chart(ctx, {
-//         type: 'bar',
-//         data: {
-//             labels: labels,
-//             datasets: [{
-//                 label: `Custos da Viagem - ${mode === 'total' ? 'Total' : 'Diário'}`,
-//                 data: chartData,
-//                 backgroundColor: [
-//                     'rgba(59, 130, 246, 0.5)',
-//                     'rgba(139, 92, 246, 0.5)'
-//                 ],
-//                 borderColor: [
-//                     'rgba(59, 130, 246, 1)',
-//                     'rgba(139, 92, 246, 1)'
-//                 ],
-//                 borderWidth: 1
-//             }]
-//         },
-//         options: {
-//             responsive: true,
-//             scales: {
-//                 y: {
-//                     beginAtZero: true
-//                 }
-//             }
-//         }
-//     });
-// }
-
 function atualizarContadorSimulacoes() {
     const count = simulacoesGuardadas.length;
     const terminarBtn = document.getElementById('terminar-btn');
