@@ -6,6 +6,8 @@ let viagensRegistadas = [];
 let simulacoesGuardadas = [];
 let viagemAtualParaCalculo = null;
 let costsChart = null;
+let servidorLogado = null; // Variável para armazenar os dados do servidor logado
+const SERVIDOR_LOGADO_KEY = 'ibge_servidor_logado'; // Chave para sessionStorage
 
 // Funções da aplicação
  function showToast(message, type = 'info') {
@@ -92,15 +94,72 @@ function atualizarGeocodigos(municipioSelect) {
     setoresContainerWrapper.classList.remove('disabled-section');
 }
 
-async function adicionarViagem() {
+// Função para simular o login
+function handleLogin() {
     const nomeServidor = document.getElementById('nome-servidor').value;
     const siapeServidor = document.getElementById('siape-servidor').value;
     const cargoServidor = document.getElementById('cargo-servidor').value;
+
+    if (!nomeServidor || !siapeServidor || !cargoServidor) {
+        showToast("Preencha todos os campos do servidor para acessar.", 'error');
+        return;
+    }
+
+    // Garante que o SIAPE seja string para o fetch (JSON Server)
+    servidorLogado = { nomeServidor, siapeServidor: String(siapeServidor), cargoServidor };
+    
+    // Salva o estado de login no sessionStorage
+    sessionStorage.setItem(SERVIDOR_LOGADO_KEY, JSON.stringify(servidorLogado));
+    
+    showToast(`Bem-vindo(a), ${nomeServidor}!`, 'success');
+    switchTab('cadastro'); // Muda para a tela de cadastro
+    carregarViagens(); // Carrega as viagens salvas
+}
+
+// NOVA: Função para Logoff
+function handleLogoff() {
+    if (confirm("Deseja realmente sair? Todas as simulações não salvas serão perdidas (simulações salvas no JSON Server persistem).")) {
+        // Limpa o estado
+        sessionStorage.removeItem(SERVIDOR_LOGADO_KEY);
+        servidorLogado = null;
+        viagensRegistadas = [];
+        simulacoesGuardadas = [];
+        viagemAtualParaCalculo = null;
+        
+        showToast("Sessão encerrada.", 'info');
+        switchTab('login'); // Volta para a tela de login
+    }
+}
+
+// Função para verificar e restaurar o estado do login
+function checkLoginState() {
+    const savedState = sessionStorage.getItem(SERVIDOR_LOGADO_KEY);
+    if (savedState) {
+        try {
+            servidorLogado = JSON.parse(savedState);
+            return true;
+        } catch (e) {
+            console.error("Erro ao carregar estado do login:", e);
+            sessionStorage.removeItem(SERVIDOR_LOGADO_KEY); // Limpa estado corrompido
+            return false;
+        }
+    }
+    return false;
+}
+
+async function adicionarViagem() {
+    if (!servidorLogado) {
+        showToast("Você precisa logar primeiro.", 'error');
+        return;
+    }
+    const { nomeServidor, siapeServidor, cargoServidor } = servidorLogado; // Usa os dados do servidor logado
+
     const agencia = document.getElementById('agencia-select').value;
     const municipio = document.getElementById('municipio-select').value;
     const selectedIds = Array.from(document.querySelectorAll('#geocodigos-container input:checked')).map(cb => parseInt(cb.value, 10));
 
-    if (!nomeServidor || !siapeServidor || !cargoServidor || !agencia || !municipio || selectedIds.length === 0) {
+    if (!agencia || !municipio || selectedIds.length === 0) {
+        showToast("Preencha todos os campos da viagem e selecione setores censitários.", 'error');
         return;
     }
 
@@ -195,8 +254,9 @@ function renderizarTabela() {
 
     if (!Array.isArray(viagensRegistadas) || viagensRegistadas.length === 0) {
         const placeholderRow = document.createElement('tr');
+        // Alterado o colspan de 6 para 7
         placeholderRow.innerHTML = `
-            <td colspan="6" class="text-center py-4 text-gray-500">
+            <td colspan="7" class="text-center py-4 text-gray-500">
                 Nenhuma viagem registrada
             </td>
         `;
@@ -209,7 +269,7 @@ function renderizarTabela() {
         row.innerHTML = `
             <td class="py-2 px-4 border-b text-sm">${index + 1}</td>
             <td class="py-2 px-4 border-b">${viagem.nomeServidor} (${viagem.siapeServidor})</td>
-            <td class="py-2 px-4 border-b">${viagem.agencia}</td>
+            <td class="py-2 px-4 border-b">${viagem.cargoServidor}</td> <td class="py-2 px-4 border-b">${viagem.agencia}</td>
             <td class="py-2 px-4 border-b">${viagem.municipio}</td>
             <td class="py-2 px-4 border-b">${viagem.setores ? viagem.setores.length : 0}</td>
             <td class="py-2 px-4 border-b space-x-2">
@@ -232,13 +292,8 @@ function atualizarContadorSimulacoes() {
 }
 
 function resetarFormularioCadastro() {
-    const nomeServidor = document.getElementById('nome-servidor');
-    const siapeServidor = document.getElementById('siape-servidor');
-    const cargoServidor = document.getElementById('cargo-servidor');
     const agenciaSelect = document.getElementById('agencia-select');
-    nomeServidor.value = '';
-    siapeServidor.value = '';
-    cargoServidor.value = '';
+    // Campos de servidor (nome, siape, cargo) foram movidos para a tela de login
     agenciaSelect.selectedIndex = 0;
     atualizarMunicipios(agenciaSelect);
 }
@@ -349,7 +404,22 @@ async function finalizarCalculo(distancia_terrestre = 0, distancia_fluvial = 0, 
 
         viagensRegistadas[viagemAtualParaCalculo.index].resultadoCalculado = resultado;
         
+        // Atualiza a lista de simulações com o novo resultado
+        const indexSimulacao = simulacoesGuardadas.findIndex(s => s.viagem_id === resultado.viagem_id);
+        if (indexSimulacao !== -1) {
+            simulacoesGuardadas[indexSimulacao] = resultado;
+        } else {
+            simulacoesGuardadas.push(resultado);
+        }
+
         atualizarContadorSimulacoes();
+
+        showToast("Cálculo finalizado e salvo com sucesso!", 'success');
+        voltarParaLista();
+        
+        // Exibe o resultado e o gráfico
+        // ... (lógica do gráfico omitida para foco na tarefa)
+
     } catch (error) {
         showToast(`Erro: ${error.message}`, 'error');
     }
@@ -407,31 +477,60 @@ function voltarParaLista() {
 }
 
 function switchTab(tabName) {
+    const loginView = document.getElementById('login-view');
     const cadastroView = document.getElementById('cadastro-view');
     const calculoView = document.getElementById('calculo-view');
+    const navTabsContainer = document.getElementById('nav-tabs-container'); // NEW
     const tabCadastro = document.getElementById('tab-cadastro');
     const tabCalculadora = document.getElementById('tab-calculadora');
+    
+    // Hide all views and tabs initially
+    loginView.classList.add('hidden');
+    cadastroView.classList.add('hidden');
+    calculoView.classList.add('hidden');
+    navTabsContainer.classList.add('hidden'); // NEW
+
+    // Reset tab styles
+    [tabCadastro, tabCalculadora].forEach(tab => {
+         tab.classList.replace('border-indigo-500', 'border-transparent');
+         tab.classList.replace('text-indigo-600', 'text-gray-500');
+    });
+
+    if (tabName === 'login') {
+        loginView.classList.remove('hidden');
+        return;
+    }
+    
+    // Show tabs for cadastro and calculadora
+    navTabsContainer.classList.remove('hidden'); // NEW
+
     if (tabName === 'cadastro') {
         cadastroView.classList.remove('hidden');
-        calculoView.classList.add('hidden');
         tabCadastro.classList.replace('border-transparent', 'border-indigo-500');
         tabCadastro.classList.replace('text-gray-500', 'text-indigo-600');
-        tabCalculadora.classList.replace('border-indigo-500', 'border-transparent');
-        tabCalculadora.classList.replace('text-indigo-600', 'text-gray-500');
         renderizarTabela(); // A tabela só é atualizada ao voltar para a aba de cadastro
-    } else {
-        cadastroView.classList.add('hidden');
+    } else { // tabName === 'calculadora'
         calculoView.classList.remove('hidden');
         tabCalculadora.classList.replace('border-transparent', 'border-indigo-500');
-        tabCalculadora.classList.replace('text-gray-500', 'text-indigo-600');
-        tabCadastro.classList.replace('border-indigo-500', 'border-transparent');
-        tabCadastro.classList.replace('text-indigo-600', 'text-gray-500');
+        tabCalculadora.classList.replace('text-indigo-600', 'text-gray-500');
     }
 }
 
 async function carregarViagens() {
+    if (!servidorLogado || !servidorLogado.siapeServidor) {
+        // Se não estiver logado, não carrega nada
+        viagensRegistadas = [];
+        simulacoesGuardadas = [];
+        renderizarTabela();
+        atualizarContadorSimulacoes();
+        return;
+    }
+    
+    const siape = servidorLogado.siapeServidor;
+    
     try {
-        const response = await fetch('http://localhost:3000/viagens');
+        // ALTERAÇÃO: Requisita viagens filtrando pelo SIAPE
+        const response = await fetch(`http://localhost:3000/viagens?siapeServidor=${siape}`);
         if (!response.ok) {
             throw new Error("Erro ao carregar viagens da API.");
         }
@@ -450,13 +549,24 @@ async function carregarViagens() {
         renderizarTabela();
         atualizarContadorSimulacoes(); // Atualiza o contador e habilita o botão de download
     } catch (error) {
-        showToast(`Erro: ${error.message}`, 'error');
+        showToast(`Erro ao carregar viagens do servidor: ${error.message}`, 'error');
         console.error("Erro ao carregar os dados:", error);
     }
 }
 
 // Inicialização da Aplicação
 document.addEventListener('DOMContentLoaded', async () => {
+    
+    // NOVO: Verifica o estado do login ao carregar a página
+    const isLoggedIn = checkLoginState();
+    if (!isLoggedIn) {
+        switchTab('login'); // Se não estiver logado, mostra a tela de login
+    } else {
+        // Se estiver logado, exibe diretamente a tela de cadastro
+        switchTab('cadastro');
+        await carregarViagens(); // Certifica-se de carregar as viagens
+    }
+
     // Carrega dados das agências do CSV
     Papa.parse("Database.CSV", {
         download: true,
@@ -483,8 +593,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('main-content').classList.remove('disabled-section');
             popularAgencias(document.getElementById('agencia-select'));
             
-            // Chama a função para carregar as viagens, que já chama renderizarTabela()
-            await carregarViagens();
         },
         error: (err) => {
             showToast(`Erro ao carregar Database: ${err.message}`, 'error');
@@ -499,13 +607,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('voltar-btn').addEventListener('click', () => voltarParaLista());
     document.getElementById('modalidade-container-calc').addEventListener('change', (e) => updateModalidadeOptionsCalc(e));
 
+    document.getElementById('login-btn').addEventListener('click', () => handleLogin()); // Listener para o botão de login
+    document.getElementById('logoff-btn')?.addEventListener('click', () => handleLogoff()); // NOVO: Listener para Logoff (o ? é para evitar erro se o elemento não existir)
+
     document.getElementById('finalizar-calculo-btn').addEventListener('click', async (event) => {
         event.preventDefault();
         const modalidade = document.querySelector('input[name="modalidade_calc"]:checked')?.value;
         if (modalidade === 'misto') {
-            // Correção: Acessa a propriedade distancia_total do objeto viagemAtualParaCalculo
             document.getElementById('distancia-total-misto').textContent = viagemAtualParaCalculo.calculoBase.distancia_total.toFixed(2);
-            // Correção: Acessa a propriedade dias_viagem do objeto viagemAtualParaCalculo
             document.getElementById('dias-totais-misto').textContent = viagemAtualParaCalculo.calculoBase.dias_viagem;
             document.getElementById('distancia-terrestre').value = '';
             document.getElementById('distancia-fluvial').value = '';
@@ -547,11 +656,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         const total = parseFloat(viagemAtualParaCalculo.calculoBase.distancia_total);
         document.getElementById('distancia-terrestre').value = Math.max(0, total - distF).toFixed(2);
     });
-    // document.getElementById('chart-total-btn').addEventListener('click', () => renderChart(viagemAtualParaCalculo.resultadoCalculado, 'total'));
-    // document.getElementById('chart-diario-btn').addEventListener('click', () => renderChart(viagemAtualParaCalculo.resultadoCalculado, 'diario'));
-    document.getElementById('tab-cadastro').addEventListener('click', () => switchTab('cadastro'));
+
+    document.getElementById('tab-cadastro').addEventListener('click', () => {
+        if (!servidorLogado) {
+            showToast("Por favor, faça o login antes de acessar o registro.", 'info');
+            switchTab('login');
+            return;
+        }
+        switchTab('cadastro');
+    });
+    
     document.getElementById('tab-calculadora').addEventListener('click', () => {
-        console.log("Botão 'Finalizar Cálculo' clicado.");
+        if (!servidorLogado) {
+            showToast("Por favor, faça o login antes de acessar a calculadora.", 'info');
+            switchTab('login');
+            return;
+        }
         if (!viagemAtualParaCalculo) {
             showToast("Primeiro, clique em 'Calcular' numa viagem da lista.", 'info');
             return;
