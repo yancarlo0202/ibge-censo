@@ -1,3 +1,47 @@
 {
-  "viagens": []
+  "viagens": [
+    {
+      "id": "1769457362455",
+      "nomeServidor": "Yan Carlo",
+      "siapeServidor": "123456",
+      "cargoServidor": "APM",
+      "agencia": "Manacapuru",
+      "municipio": "Manacapuru",
+      "setores": [
+        {
+          "agencia": "Manacapuru",
+          "municipio": "Manacapuru",
+          "geocodigo": "130250405000043",
+          "distancia_sede": 2.21,
+          "trajeto_diario": 29.91,
+          "estabelecimentos": 9,
+          "row_id": 3090
+        }
+      ],
+      "resultadoCalculado": {
+        "viagem_id": "1769457362455",
+        "Nº Viagem": 1,
+        "nome_servidor": "Yan Carlo",
+        "siape": "123456",
+        "cargo": "APM",
+        "agencia": "Manacapuru",
+        "municipio": "Manacapuru",
+        "geocodigos_selecionados": "\"130250405000043\"",
+        "soma_estabelecimentos": 9,
+        "dias_viagem_calculado": 3,
+        "modalidade": "terrestre",
+        "veiculo_terrestre": "4x4",
+        "motor_fluvial": "",
+        "distancia_total_km": "94.15",
+        "distancia_terrestre_km": "0.00",
+        "distancia_fluvial_km": "0.00",
+        "dias_com_diaria_terrestre": 3,
+        "dias_com_diaria_fluvial": 0,
+        "custo_diarias_rs": "750.00",
+        "custo_combustivel_terrestre_rs": "75.32",
+        "custo_combustivel_fluvial_rs": "0.00",
+        "custo_total_rs": "825.32"
+      }
+    }
+  ]
 }
