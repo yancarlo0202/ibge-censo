@@ -15,18 +15,18 @@ function formatarMoeda(valor) {
 }
 
 // Funções da aplicação
- function showToast(message, type = 'info') {
-     const toast = document.createElement('div');
-     toast.className = 'toast';
-     toast.textContent = message;
-     const typeClasses = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500' };
-     toast.classList.add(typeClasses[type] || typeClasses.info);
-     const toastContainer = document.getElementById('toast-container');
-     if (toastContainer) {
-         toastContainer.appendChild(toast);
-         setTimeout(() => { toast.remove(); }, 5000);
-     }
- }
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    const typeClasses = { success: 'bg-green-500', error: 'bg-red-500', info: 'bg-blue-500' };
+    toast.classList.add(typeClasses[type] || typeClasses.info);
+    const toastContainer = document.getElementById('toast-container');
+    if (toastContainer) {
+        toastContainer.appendChild(toast);
+        setTimeout(() => { toast.remove(); }, 5000);
+    }
+}
 
 function popularAgencias(agenciaSelect) {
     agenciaSelect.innerHTML = '<option value="">-- Escolha uma agência --</option>';
@@ -100,10 +100,10 @@ function handleLogin() {
 
     servidorLogado = { nomeServidor, siapeServidor: String(siapeServidor), cargoServidor };
     sessionStorage.setItem(SERVIDOR_LOGADO_KEY, JSON.stringify(servidorLogado));
-    
+
     showToast(`Bem-vindo(a), ${nomeServidor}!`, 'success');
-    switchTab('cadastro'); 
-    carregarViagens(); 
+    switchTab('cadastro');
+    carregarViagens();
 }
 
 function handleLogoff() {
@@ -113,9 +113,9 @@ function handleLogoff() {
         viagensRegistadas = [];
         simulacoesGuardadas = [];
         viagemAtualParaCalculo = null;
-        
+
         showToast("Sessão encerrada.", 'info');
-        switchTab('login'); 
+        switchTab('login');
     }
 }
 
@@ -127,7 +127,7 @@ function checkLoginState() {
             return true;
         } catch (e) {
             console.error("Erro ao carregar estado do login:", e);
-            sessionStorage.removeItem(SERVIDOR_LOGADO_KEY); 
+            sessionStorage.removeItem(SERVIDOR_LOGADO_KEY);
             return false;
         }
     }
@@ -139,7 +139,7 @@ async function adicionarViagem() {
         showToast("Você precisa logar primeiro.", 'error');
         return;
     }
-    const { nomeServidor, siapeServidor, cargoServidor } = servidorLogado; 
+    const { nomeServidor, siapeServidor, cargoServidor } = servidorLogado;
 
     const agencia = document.getElementById('agencia-select').value;
     const municipio = document.getElementById('municipio-select').value;
@@ -183,7 +183,6 @@ async function adicionarViagem() {
 async function excluirViagem(index) {
     if (confirm('Tem a certeza de que pretende excluir esta viagem?')) {
         const viagemRemovida = viagensRegistadas[index];
-        
         try {
             const response = await fetch(`http://localhost:3000/viagens/${viagemRemovida.id}`, {
                 method: 'DELETE'
@@ -207,56 +206,105 @@ async function excluirViagem(index) {
 
 function visualizarViagem(index) {
     const viagem = viagensRegistadas[index];
-    const soma_estabelecimentos = viagem.setores.reduce((acc, s) => acc + (Number(s.estabelecimentos) || 0), 0);
+    if (!viagem) return;
+
+    // IDs CORRIGIDOS PARA CASAR COM O index.html
+    const modalVisualizar = document.getElementById('view-modal-backdrop');
+    const detalhesViagem = document.getElementById('view-modal-content');
+
+    // Cálculos de base para exibição
+    const soma_estabelecimentos = (viagem.setores || []).reduce((acc, s) => acc + (Number(s.estabelecimentos) || 0), 0);
     const dias_viagem = Math.ceil(soma_estabelecimentos / 4) || 1;
-    const maior_distancia_sede = Math.max(0, ...viagem.setores.map(s => Number(s.distancia_sede) || 0));
-    const soma_trajetos_diarios = viagem.setores.reduce((acc, s) => acc + (Number(s.trajeto_diario) || 0), 0);
-    const distancia_total = (maior_distancia_sede * 2) + (soma_trajetos_diarios * dias_viagem);
-    const viewModalContent = document.getElementById('view-modal-content');
-    const viewModalBackdrop = document.getElementById('view-modal-backdrop');
-    
-    let secaoCalculo = '';
+
+    // Cálculo das distâncias usando os nomes de colunas corretos do CSV
+    const dist_terr_total = (viagem.setores || []).reduce((acc, s) => acc + (Number(s.dist_sede_terr || 0) * 2) + (Number(s.trajeto_dia_terr || 0) * dias_viagem), 0);
+    const dist_fluv_total = (viagem.setores || []).reduce((acc, s) => acc + (Number(s.dist_sede_fluv || 0) * 2) + (Number(s.trajeto_dia_fluv || 0) * dias_viagem), 0);
+    const distancia_total = dist_terr_total + dist_fluv_total;
+
+    let secaoCalculo = `
+        <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <p class="text-yellow-700">⚠️ Nenhum cálculo foi finalizado para esta viagem ainda.</p>
+        </div>`;
+
     if (viagem.resultadoCalculado) {
         const res = viagem.resultadoCalculado;
-        const modalidadeFormatada = res.modalidade.charAt(0).toUpperCase() + res.modalidade.slice(1);
-        const modBaixa = res.modalidade.toLowerCase();
-        
+        const modBaixa = (res.modalidade || '').toLowerCase();
+        let detalhesCustos = '';
+
+        if (modBaixa === 'misto') {
+            const custoTerrestreTotal = parseFloat(res.custo_combustivel_terrestre_rs || 0) + (parseFloat(res.custo_diarias_rs || 0) / 2);
+            const custoFluvialTotal = parseFloat(res.custo_combustivel_fluvial_rs || 0) + (parseFloat(res.custo_diarias_rs || 0) / 2);
+
+            detalhesCustos = `
+                <p><strong>Custo Terrestre (Gasolina + Diárias):</strong> R$ ${formatarMoeda(custoTerrestreTotal)}</p>
+                <p><strong>Custo Fluvial (Gasolina + Diárias):</strong> R$ ${formatarMoeda(custoFluvialTotal)}</p>
+                <p class="text-indigo-700 font-bold border-t pt-2 mt-1"><strong>Total Geral:</strong> R$ ${formatarMoeda(res.custo_total_rs)}</p>
+            `;
+        } else {
+            const gasolina = modBaixa === 'terrestre' ? res.custo_combustivel_terrestre_rs : res.custo_combustivel_fluvial_rs;
+            detalhesCustos = `
+                <p><strong>Custo Gasolina:</strong> R$ ${formatarMoeda(gasolina)}</p>
+                <p><strong>Custo Diárias:</strong> R$ ${formatarMoeda(res.custo_diarias_rs)}</p>
+                <p class="text-indigo-700 font-bold border-t border-green-200 pt-2 mt-1">
+                    <strong>Custo Total:</strong> R$ ${formatarMoeda(res.custo_total_rs)}
+                </p>
+            `;
+        }
+
         secaoCalculo = `
             <div class="bg-green-100 p-4 rounded-lg border border-green-300">
-                <h3 class="font-semibold text-green-800 mb-2">✅ Cálculo Realizado</h3>
-                <p><strong>Modalidade:</strong> ${modalidadeFormatada}</p>
+                <h3 class="font-semibold text-green-800 mb-2">✅ Cálculo Realizado (${res.modalidade.toUpperCase()})</h3>
                 <div class="grid grid-cols-1 gap-2 mt-2 border-t border-green-200 pt-2">
-                    ${(modBaixa === 'terrestre' || modBaixa === 'misto') ? `<p><strong>Custo Terrestre:</strong> R$ ${formatarMoeda(res.custo_combustivel_terrestre_rs)}</p>` : ''}
-                    ${(modBaixa === 'fluvial' || modBaixa === 'misto') ? `<p><strong>Custo Fluvial:</strong> R$ ${formatarMoeda(res.custo_combustivel_fluvial_rs)}</p>` : ''}
-                    <p><strong>Custo Diárias:</strong> R$ ${formatarMoeda(res.custo_diarias_rs)}</p>
-                    <p class="text-indigo-700 font-bold border-t border-green-200 pt-2 mt-1">
-                        <strong>Custo Total:</strong> R$ ${formatarMoeda(res.custo_total_rs)}
-                    </p>
+                    ${detalhesCustos}
                 </div>
-            </div>`;
-    } else {
-        secaoCalculo = `
-            <div class="bg-orange-100 p-4 rounded-lg border border-orange-300">
-                <h3 class="font-semibold text-orange-800 mb-2">⏳ Cálculo Pendente</h3>
-                <p class="text-orange-700">Clique em "Calcular Custos" para realizar a simulação.</p>
             </div>`;
     }
 
-    viewModalContent.innerHTML = `
-        <div class="bg-blue-50 p-4 rounded-lg"><h3 class="font-semibold text-blue-800 mb-2">Informações do Servidor</h3><p><strong>Nome:</strong> ${viagem.nomeServidor}</p><p><strong>SIAPE:</strong> ${viagem.siapeServidor}</p><p><strong>Cargo:</strong> ${viagem.cargoServidor}</p></div>
-        <div class="bg-green-50 p-4 rounded-lg"><h3 class="font-semibold text-green-800 mb-2">Localização</h3><p><strong>Agência:</strong> ${viagem.agencia}</p><p><strong>Município:</strong> ${viagem.municipio}</p></div>
-        <div class="bg-gray-50 p-4 rounded-lg"><h3 class="font-semibold text-gray-800 mb-2">Dados Calculados</h3><p><strong>Número de Setores:</strong> ${viagem.setores.length}</p><p><strong>Total de Estabelecimentos:</strong> ${soma_estabelecimentos}</p><p><strong>Dias de Viagem Estimados:</strong> ${dias_viagem}</p><p><strong>Distância Total Estimada:</strong> ${distancia_total.toFixed(2).replace('.', ',')} km</p></div>
-        <div class="bg-yellow-50 p-4 rounded-lg"><h3 class="font-semibold text-yellow-800 mb-2">Setores Censitários (${viagem.setores.length})</h3><div class="max-h-48 overflow-y-auto custom-scrollbar">${viagem.setores.map(setor => `<div class="border-b border-yellow-200 py-2 last:border-b-0"><p><strong>Código:</strong> ${setor.geocodigo}</p><p><strong>Estabelecimentos:</strong> ${setor.estabelecimentos}</p><p><strong>Distância da Sede:</strong> ${setor.distancia_sede} km</p><p><strong>Trajeto Diário:</strong> ${setor.trajeto_diario} km</p></div>`).join('')}</div></div>
-        ${secaoCalculo}
+    detalhesViagem.innerHTML = `
+        <div class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-50 p-3 rounded shadow-sm">
+                    <h3 class="font-bold text-indigo-600 border-b mb-2">Informações do Servidor</h3>
+                    <p><strong>Nome:</strong> ${viagem.nomeServidor}</p>
+                    <p><strong>SIAPE:</strong> ${viagem.siapeServidor}</p>
+                    <p><strong>Cargo:</strong> ${viagem.cargoServidor}</p>
+                </div>
+                <div class="bg-gray-50 p-3 rounded shadow-sm">
+                    <h3 class="font-bold text-indigo-600 border-b mb-2">Localização</h3>
+                    <p><strong>Agência:</strong> ${viagem.agencia}</p>
+                    <p><strong>Município:</strong> ${viagem.municipio}</p>
+                </div>
+            </div>
+            
+            <div class="bg-indigo-50 p-3 rounded shadow-sm">
+                <h3 class="font-bold text-indigo-600 border-b mb-2">Resumo do Percurso</h3>
+                <p><strong>Setores Selecionados:</strong> ${viagem.setores.length}</p>
+                <p><strong>Distância Terrestre:</strong> ${dist_terr_total.toFixed(2).replace('.', ',')} km</p>
+                <p><strong>Distância Fluvial:</strong> ${dist_fluv_total.toFixed(2).replace('.', ',')} km</p>
+                <p><strong>Dias Estimados:</strong> ${dias_viagem}</p>
+            </div>
+
+            ${secaoCalculo}
+
+            <div>
+                <h3 class="font-bold text-indigo-600 mb-2">Setores da Viagem</h3>
+                <div class="max-h-40 overflow-y-auto border rounded p-2 bg-white">
+                    <ul class="list-disc pl-5 text-sm space-y-1">
+                        ${viagem.setores.map(s => `<li>Setor: ${s.geocodigo}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+        </div>
     `;
-    viewModalBackdrop.classList.remove('hidden');
-    viewModalBackdrop.classList.add('flex');
+
+    modalVisualizar.classList.remove('hidden');
+    modalVisualizar.classList.add('flex');
 }
 
 function renderizarTabela() {
     const viagensTableBody = document.getElementById('viagens-table-body');
     if (!viagensTableBody) return;
-    viagensTableBody.innerHTML = ''; 
+    viagensTableBody.innerHTML = '';
 
     if (!Array.isArray(viagensRegistadas) || viagensRegistadas.length === 0) {
         viagensTableBody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-gray-500">Nenhuma viagem registrada</td></tr>`;
@@ -299,115 +347,192 @@ function resetarFormularioCadastro() {
 function abrirVistaCalculo(index) {
     const viagem = viagensRegistadas[index];
     viagemAtualParaCalculo = { ...viagem, index };
-    switchTab('calculadora');
-
+    
+    // Referências do DOM
     const tripDetailsHeader = document.getElementById('trip-details-header');
     const tripSummary = document.getElementById('trip-summary');
-    const veiculoOptionsContainerCalc = document.getElementById('veiculo-options-container-calc');
-    const custosContainerCalc = document.getElementById('custos-container-calc');
-    const resultadoCalculoContainer = document.getElementById('resultado-calculo-container');
-    const { nomeServidor, siapeServidor, agencia, municipio, setores } = viagem;
+    const { agencia, municipio, setores } = viagem;
+
+    // Muda para a aba de cálculo
+    switchTab('calculadora');
 
     tripDetailsHeader.textContent = `${municipio} - ${agencia}`;
-    const soma_estabelecimentos = setores ? setores.reduce((acc, s) => acc + (Number(s.estabelecimentos) || 0), 0) : 0;
+    
+    // Cálculo de base
+    const soma_estabelecimentos = setores.reduce((acc, s) => acc + (Number(s.estabelecimentos) || 0), 0);
     const dias_viagem = Math.ceil(soma_estabelecimentos / 4) || 1;
-    const maior_distancia_sede = Math.max(0, ...(setores || []).map(s => Number(s.distancia_sede) || 0));
-    const soma_trajetos_diarios = setores ? setores.reduce((acc, s) => acc + (Number(s.trajeto_diario) || 0), 0) : 0;
-    const distancia_total = (maior_distancia_sede * 2) + (soma_trajetos_diarios * dias_viagem);
-    viagemAtualParaCalculo.calculoBase = { soma_estabelecimentos, dias_viagem, distancia_total };
-    tripSummary.innerHTML = `<p><strong>Servidor:</strong> ${nomeServidor} (${siapeServidor})</p><p><strong>Nº de Setores:</strong> ${setores.length}</p><p><strong>Total de Estabelecimentos:</strong> ${soma_estabelecimentos}</p><p><strong>Dias de Viagem Calculados:</strong> ${dias_viagem}</p><p><strong>Distância Total Estimada:</strong> ${distancia_total.toFixed(2).replace('.', ',')} km</p>`;
 
-    document.querySelectorAll('input[name="modalidade_calc"]').forEach(radio => radio.checked = false);
-    veiculoOptionsContainerCalc.innerHTML = '';
-    custosContainerCalc.innerHTML = '';
-    resultadoCalculoContainer.classList.add('hidden');
+    // Cálculo da distância baseado no trajeto real do CSV
+    // Dentro de abrirVistaCalculo(index)
+    const dist_terr_total = setores.reduce((acc, s) => acc + (Number(s.dist_sede_terr || 0) * 2) + (Number(s.trajeto_dia_terr || 0) * dias_viagem), 0);
+    const dist_fluv_total = setores.reduce((acc, s) => acc + (Number(s.dist_sede_fluv || 0) * 2) + (Number(s.trajeto_dia_fluv || 0) * dias_viagem), 0);
+    const distancia_total = dist_terr_total + dist_fluv_total;
+
+    viagemAtualParaCalculo.calculoBase = {
+        soma_estabelecimentos,
+        dias_viagem,
+        distancia_total,
+        dist_terr_total,
+        dist_fluv_total
+    };
+
+    // Identificação do Modal predominante
+    const modaisNoSetor = [...new Set(setores.map(s => (s.modal || 'TERRESTRE').toUpperCase()))];
+    let modalIdentificado = 'terrestre';
+    if (modaisNoSetor.length > 1 || modaisNoSetor.includes('MISTO')) {
+        modalIdentificado = 'misto';
+    } else if (modaisNoSetor.includes('FLUVIAL')) {
+        modalIdentificado = 'fluvial';
+    }
+
+    // Atualização da Interface
+    tripSummary.innerHTML = `
+        <p><strong>Modal Identificado:</strong> <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded">${modalIdentificado.toUpperCase()}</span></p>
+        <p><strong>Nº de Setores:</strong> ${setores.length}</p>
+        <p><strong>Total de Estabelecimentos:</strong> ${soma_estabelecimentos}</p>
+        <p><strong>Dias de Viagem Estimados:</strong> ${dias_viagem}</p>
+        <p><strong>Distância Total:</strong> ${distancia_total.toFixed(2).replace('.', ',')} km</p>
+    `;
+
+    // Seleção automática e carregamento dos campos de custo
+    const radioInput = document.querySelector(`input[name="modalidade_calc"][value="${modalIdentificado}"]`);
+    if (radioInput) {
+        radioInput.checked = true;
+        forcarUpdateCampos(modalIdentificado);
+    }
 }
 
-async function finalizarCalculo(distancia_terrestre = 0, distancia_fluvial = 0, dias_diaria_terrestre = 0, dias_diaria_fluvial = 0) {
+// Função auxiliar para carregar os campos sem depender de um evento de clique
+function forcarUpdateCampos(modalidade) {
+    const fakeEvent = { target: { value: modalidade } };
+    updateModalidadeOptionsCalc(fakeEvent);
+}
+
+async function finalizarCalculo() {
     if (!viagemAtualParaCalculo || !viagemAtualParaCalculo.calculoBase) {
         showToast("Selecione uma viagem antes de finalizar.", 'error');
         return;
     }
 
-    const { id, nomeServidor, siapeServidor, cargoServidor, agencia, municipio, setores } = viagensRegistadas[viagemAtualParaCalculo.index];
-    const { soma_estabelecimentos, dias_viagem, distancia_total } = viagemAtualParaCalculo.calculoBase;
-    const modalidade = document.querySelector('input[name="modalidade_calc"]:checked')?.value;
+    // 1. Recuperar os dados da viagem e do servidor
+    const viagem = viagensRegistadas[viagemAtualParaCalculo.index];
+    const { id, nomeServidor, siapeServidor, cargoServidor, agencia, municipio, setores } = viagem;
+    const { soma_estabelecimentos, dias_viagem, dist_terr_total, dist_fluv_total, distancia_total } = viagemAtualParaCalculo.calculoBase;
 
-    if (!modalidade) { showToast("Selecione uma modalidade.", 'error'); return; }
+    // 2. Identificar a modalidade selecionada (rádio oculto)
+    const modalidadeInput = document.querySelector('input[name="modalidade_calc"]:checked');
+    if (!modalidadeInput) {
+        showToast("Modalidade não identificada.", 'error');
+        return;
+    }
+    const modalidade = modalidadeInput.value;
 
+    // 3. Capturar valores de custo da interface
     const valorCombustivel = parseFloat(document.getElementById('valor-combustivel-unico')?.value) || 0;
-    if (valorCombustivel <= 0) { showToast("Insira um valor de combustível válido.", 'error'); return; }
-
-    let custo_combustivel_terrestre = 0, custo_combustivel_fluvial = 0, custo_diarias = 0;
-    let veiculo_terrestre_selecionado = '', motor_fluvial_selecionado = '';
-
-    if (modalidade === 'misto' && distancia_terrestre === 0 && distancia_fluvial === 0) {
-        distancia_terrestre = distancia_total / 2;
-        distancia_fluvial = distancia_total / 2;
-        dias_diaria_terrestre = Math.ceil(dias_viagem / 2);
-        dias_diaria_fluvial = Math.floor(dias_viagem / 2);
+    if (valorCombustivel <= 0) {
+        showToast("Insira o valor do combustível.", 'error');
+        return;
     }
 
-    if (modalidade === 'terrestre' || modalidade === 'misto') {
+    let custo_combustivel_terrestre = 0;
+    let custo_combustivel_fluvial = 0;
+    let custo_diarias = 0;
+    let veiculo_terrestre_selecionado = '';
+    let motor_fluvial_selecionado = '';
+    let dist_terr_final = 0;
+    let dist_fluv_final = 0;
+
+    // 4. Lógica de Cálculo por Modalidade
+    if (modalidade === 'terrestre') {
         veiculo_terrestre_selecionado = document.getElementById('veiculo-terrestre-select')?.value || '';
         const consumo = VEICULOS_TERRESTRES[veiculo_terrestre_selecionado]?.consumo_km_l || 1;
-        const dist = modalidade === 'misto' ? distancia_terrestre : distancia_total;
-        custo_combustivel_terrestre = (dist / consumo) * valorCombustivel;
-    }
+        dist_terr_final = dist_terr_total;
+        custo_combustivel_terrestre = (dist_terr_final / consumo) * valorCombustivel;
+        
+        const valorDiaria = parseFloat(document.getElementById('valor-diaria-terrestre')?.value) || 0;
+        const numDias = parseInt(document.getElementById('dias-diaria-terrestre')?.value) || 0;
+        custo_diarias = valorDiaria * numDias;
 
-    if (modalidade === 'fluvial' || modalidade === 'misto') {
+    } else if (modalidade === 'fluvial') {
         motor_fluvial_selecionado = document.getElementById('motor-fluvial-select')?.value || '';
         const motor = MOTORES_FLUVIAIS[motor_fluvial_selecionado];
-        const dist = modalidade === 'misto' ? distancia_fluvial : distancia_total;
-        const tempo_horas = motor ? dist / motor.km_hora : 0;
+        dist_fluv_final = dist_fluv_total;
+        const tempo_horas = motor ? dist_fluv_final / motor.km_hora : 0;
         custo_combustivel_fluvial = (tempo_horas * (motor?.litros_hora || 0)) * valorCombustivel;
-    }
+        
+        const valorDiaria = parseFloat(document.getElementById('valor-diaria-fluvial')?.value) || 0;
+        const numDias = parseInt(document.getElementById('dias-diaria-fluvial')?.value) || 0;
+        custo_diarias = valorDiaria * numDias;
 
-    if (modalidade === 'misto') {
+    } else if (modalidade === 'misto') {
+        dist_terr_final = dist_terr_total;
+        dist_fluv_final = dist_fluv_total;
+        
+        veiculo_terrestre_selecionado = document.getElementById('veiculo-terrestre-select')?.value || '';
+        motor_fluvial_selecionado = document.getElementById('motor-fluvial-select')?.value || '';
+
+        const consumoT = VEICULOS_TERRESTRES[veiculo_terrestre_selecionado]?.consumo_km_l || 1;
+        custo_combustivel_terrestre = (dist_terr_final / consumoT) * valorCombustivel;
+
+        const motorF = MOTORES_FLUVIAIS[motor_fluvial_selecionado];
+        const tempo_horas = motorF ? dist_fluv_final / motorF.km_hora : 0;
+        custo_combustivel_fluvial = (tempo_horas * (motorF?.litros_hora || 0)) * valorCombustivel;
+
         const valorDiariaT = parseFloat(document.getElementById('valor-diaria-terrestre')?.value) || 0;
         const valorDiariaF = parseFloat(document.getElementById('valor-diaria-fluvial')?.value) || 0;
-        custo_diarias = (valorDiariaT * dias_diaria_terrestre) + (valorDiariaF * dias_diaria_fluvial);
-    } else {
-        const idDiaria = modalidade === 'terrestre' ? 'dias-diaria-terrestre' : 'dias-diaria-fluvial';
-        const idValor = modalidade === 'terrestre' ? 'valor-diaria-terrestre' : 'valor-diaria-fluvial';
-        const dias = Math.min(parseInt(document.getElementById(idDiaria)?.value) || 0, dias_viagem);
-        const valor = parseFloat(document.getElementById(idValor)?.value) || 0;
-        dias_diaria_terrestre = modalidade === 'terrestre' ? dias : 0;
-        dias_diaria_fluvial = modalidade === 'fluvial' ? dias : 0;
-        custo_diarias = valor * dias;
+        // Divisão de diárias (pode ser ajustada conforme necessidade)
+        custo_diarias = (valorDiariaT * (dias_viagem / 2)) + (valorDiariaF * (dias_viagem / 2));
     }
 
     const custoTotal = custo_combustivel_terrestre + custo_combustivel_fluvial + custo_diarias;
 
+    // 5. Montar o objeto de resultado
     const resultado = {
-        viagem_id: id, "Nº Viagem": viagemAtualParaCalculo.index + 1,
-        nome_servidor: nomeServidor, siape: siapeServidor, cargo: cargoServidor, agencia, municipio,
-        geocodigos_selecionados: `"${(setores || []).map(s => s.geocodigo).join(', ')}"`, soma_estabelecimentos, dias_viagem_calculado: dias_viagem, modalidade,
-        veiculo_terrestre: veiculo_terrestre_selecionado, motor_fluvial: motor_fluvial_selecionado,
+        viagem_id: id,
+        "Nº Viagem": viagemAtualParaCalculo.index + 1,
+        nome_servidor: nomeServidor, 
+        siape: siapeServidor, 
+        cargo: cargoServidor, 
+        agencia, 
+        municipio,
+        geocodigos_selecionados: (setores || []).map(s => s.geocodigo).join(', '),
+        soma_estabelecimentos, 
+        dias_viagem_calculado: dias_viagem, 
+        modalidade,
+        veiculo_terrestre: veiculo_terrestre_selecionado, 
+        motor_fluvial: motor_fluvial_selecionado,
         distancia_total_km: distancia_total.toFixed(2),
-        distancia_terrestre_km: distancia_terrestre.toFixed(2),
-        distancia_fluvial_km: distancia_fluvial.toFixed(2),
-        dias_com_diaria_terrestre: dias_diaria_terrestre, dias_com_diaria_fluvial: dias_diaria_fluvial,
-        custo_diarias_rs: custo_diarias.toFixed(2), 
+        distancia_terrestre_km: dist_terr_final.toFixed(2),
+        distancia_fluvial_km: dist_fluv_final.toFixed(2),
+        custo_diarias_rs: custo_diarias.toFixed(2),
         custo_combustivel_terrestre_rs: custo_combustivel_terrestre.toFixed(2),
-        custo_combustivel_fluvial_rs: custo_combustivel_fluvial.toFixed(2), 
+        custo_combustivel_fluvial_rs: custo_combustivel_fluvial.toFixed(2),
         custo_total_rs: custoTotal.toFixed(2)
     };
 
+    // 6. Salvar na API e atualizar estado local
     try {
         const response = await fetch(`http://localhost:3000/viagens/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...viagensRegistadas[viagemAtualParaCalculo.index], resultadoCalculado: resultado }),
+            body: JSON.stringify({ ...viagem, resultadoCalculado: resultado }),
         });
-        if (!response.ok) throw new Error('Erro ao salvar o cálculo.');
+        if (!response.ok) throw new Error('Erro ao salvar o cálculo no servidor.');
+
         viagensRegistadas[viagemAtualParaCalculo.index].resultadoCalculado = resultado;
-        const indexSimulacao = simulacoesGuardadas.findIndex(s => s.viagem_id === resultado.viagem_id);
-        if (indexSimulacao !== -1) { simulacoesGuardadas[indexSimulacao] = resultado; } else { simulacoesGuardadas.push(resultado); }
+        const idx = simulacoesGuardadas.findIndex(s => s.viagem_id === id);
+        if (idx !== -1) {
+            simulacoesGuardadas[idx] = resultado;
+        } else {
+            simulacoesGuardadas.push(resultado);
+        }
+
         atualizarContadorSimulacoes();
         showToast("Cálculo finalizado com sucesso!", 'success');
         voltarParaLista();
-    } catch (error) { showToast(`Erro: ${error.message}`, 'error'); }
+    } catch (error) { 
+        showToast(`Erro ao finalizar: ${error.message}`, 'error'); 
+    }
 }
 
 function updateModalidadeOptionsCalc(event) {
@@ -459,7 +584,6 @@ function switchTab(tabName) {
     const cadastroView = document.getElementById('cadastro-view');
     const calculoView = document.getElementById('calculo-view');
     const navTabsContainer = document.getElementById('nav-tabs-container');
-    
     loginView.classList.add('hidden');
     cadastroView.classList.add('hidden');
     calculoView.classList.add('hidden');
@@ -491,19 +615,33 @@ async function carregarViagens() {
 document.addEventListener('DOMContentLoaded', async () => {
     if (!checkLoginState()) { switchTab('login'); } else { switchTab('cadastro'); await carregarViagens(); }
 
+    // No evento DOMContentLoaded, dentro do Papa.parse:
+    // script.js - Localize o Papa.parse e atualize o mapeamento das colunas
+    // Localize o Papa.parse e substitua o mapeamento das colunas
     Papa.parse("Database.CSV", {
-        download: true, header: true, skipEmptyLines: true,
-        complete: function(results) {
-            dadosCompletos = results.data.map((row, index) => ({
-                ...row, row_id: index,
-                distancia_sede: parseFloat(String(row.distancia_sede || '0').replace(',', '.')) || 0,
-                trajeto_diario: parseFloat(String(row.trajeto_diario || '0').replace(',', '.')) || 0,
-                estabelecimentos: parseInt(row.estabelecimentos, 10) || 0
-            }));
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: function (results) {
+            dadosCompletos = results.data.map((row, index) => {
+                const parseNum = (val) => parseFloat(String(val || '0').replace(',', '.')) || 0;
+
+                return {
+                    ...row,
+                    row_id: index,
+                    modal: row.modal ? row.modal.toUpperCase() : 'TERRESTRE',
+                    // Mapeamos os trajetos específicos do CSV
+                    dist_sede_terr: parseNum(row.deslocamento_terrestre_km),
+                    trajeto_dia_terr: parseNum(row.percurso_terrestre_km),
+                    dist_sede_fluv: parseNum(row.deslocamento_fluvial_km),
+                    trajeto_dia_fluv: parseNum(row.percurso_fluvial_km),
+                    estabelecimentos: parseInt(row.num_estab, 10) || 0
+                };
+            });
             document.getElementById('main-content').classList.remove('disabled-section');
             popularAgencias(document.getElementById('agencia-select'));
         }
-    });
+    });;
 
     document.getElementById('agencia-select').addEventListener('change', (e) => atualizarMunicipios(e.target));
     document.getElementById('municipio-select').addEventListener('change', (e) => atualizarGeocodigos(e.target));
@@ -516,7 +654,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('finalizar-calculo-btn').addEventListener('click', async (e) => {
         e.preventDefault();
-        await finalizarCalculo(); 
+        await finalizarCalculo();
     });
 
     document.getElementById('fechar-view-modal').addEventListener('click', () => {
